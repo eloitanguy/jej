@@ -54,3 +54,17 @@ class AverageMeter(object):
 
     def reset(self):
         self.number, self.sum, self.avg = 0., 0., 0.
+
+
+def precision_recall(dt, gt):
+    """
+    :param dt: 1D tensor of detections in {0,1}
+    :param gt: 1D tensor of ground truth values in {0,1}
+    :return: precision, recall
+    """
+    tp = sum(dt * gt)
+    tn = sum((1 - dt) * (1 - gt))
+    fp = sum((1-gt)*dt)
+    fn = sum(gt*(1-dt))
+
+    return tp/(tp+fp).item(), tp/(tp+fn).item()

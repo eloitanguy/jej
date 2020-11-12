@@ -5,13 +5,13 @@ DATASET_CONFIG = {
 
 TRAIN_CONFIG = {
     'batch_size': 1000,
-    'learning_rate': 1e-6,
+    'learning_rate': 1e-3,
     'weight_decay': 0,
     'workers': 6,
-    'experiment_name': 'test',
-    'epochs': 20,
+    'experiment_name': 'test_classifier_10',
+    'epochs': 1,
     'checkpoint_every': 100,
     'val_every': 200,
     'val_batches': 10,
-    'RNN_hidden_units': 100
+    'RNN_hidden_units': 5
 }

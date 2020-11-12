@@ -5,7 +5,6 @@ import csv
 import torchtext
 from config import DATASET_CONFIG
 
-
 # ---------------------
 # ----- Constants -----
 # ---------------------
@@ -20,7 +19,7 @@ GLOVE = torchtext.vocab.GloVe(dim=300)  # embedding dimension is emb_dim = 300 h
 
 cfg = DATASET_CONFIG
 DATASET_SIZE = 665777
-DATASET_SPLIT = int(DATASET_SIZE*cfg['train_percent'])
+DATASET_SPLIT = int(DATASET_SIZE * cfg['train_percent'])
 
 
 # ---------------------------
@@ -35,6 +34,7 @@ class TweetDataset(Dataset):
     * 'train' ->the training set (examples in [0, DATASET_SPLIT[) \n
     * 'val' or 'validation' -> the validation set (examples in [DATASET_SPLIT, ...[
     """
+
     def __init__(self, dataset_type='train'):
         assert dataset_type in ['train', 'val', 'validation'], "Please provide a valid "
         with open(cfg['csv_relative_path'], newline='') as csvfile:
@@ -49,7 +49,7 @@ class TweetDataset(Dataset):
     def __getitem__(self, idx):
         line = self.data[idx]  # the first line is the column names
 
-        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']]),
+        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']]) % (3600 * 24)/(3600 * 24),
                                      int(line[COLUMN_NAME_TO_IDX['user_verified']] == 'True'),
                                      int(line[COLUMN_NAME_TO_IDX['user_statuses_count']]),
                                      int(line[COLUMN_NAME_TO_IDX['user_followers_count']]),

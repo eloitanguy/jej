@@ -2,15 +2,47 @@ import torch
 from dataset import TweetDataset, collate_function
 from tensorboardX import SummaryWriter
 from torch.optim import Adam
-from models import RNN
+from models import RNN, Classifier
 from config import TRAIN_CONFIG
-from modules import printProgressBar, AverageMeter, MAE, MSE
+from modules import printProgressBar, AverageMeter, MAE, MSE, precision_recall
 from torch.utils.data import DataLoader
 import time
 import datetime
 import os
+from torch.nn import BCELoss
 
 cfg = TRAIN_CONFIG
+
+
+def infer_RNN(model, batch, loss_fun):
+    # inference
+    target = batch['target'].cuda()
+    numeric = batch['numeric'].cuda()
+    model_input = batch['embedding'].cuda()
+    model_output = model(model_input, numeric)
+
+    # loss
+    return loss_fun(target, model_output)  # still validating on MAE
+
+
+def infer_Classifier(model, batch):
+    """
+    :param model: a classifier model
+    :param batch: the batch to evaluate on
+    :return: the loss on this batch
+    """
+    t = 10
+    target = batch['target'].unsqueeze(1)
+    target[target < t] = 0.
+    target[target >= t] = 1.
+    target = target.cuda()
+    numeric = batch['numeric'].cuda()
+    model_output = model(numeric)
+
+    loss_fun = BCELoss()
+
+    return loss_fun(model_output.float(), target.float())
+
 
 
 def val_RNN(model, val_loader, writer, step):
@@ -28,13 +60,8 @@ def val_RNN(model, val_loader, writer, step):
             if batch_idx >= cfg['val_batches']:
                 break
 
-            # inference
-            target = batch['target'].cuda()
-            model_input = batch['embedding'].cuda()
-            model_output = model(model_input)
-
-            # loss
-            loss = MAE(target, model_output)  # still validating on MAE
+            # loss = infer_RNN(model, batch, MAE)
+            loss = infer_Classifier(model, batch)
 
             # log
             printProgressBar(batch_idx, cfg['val_batches'], suffix='\tValidation ...')
@@ -60,7 +87,8 @@ def train_RNN():
         os.makedirs(tb_folder)
 
     writer = SummaryWriter(logdir=tb_folder, flush_secs=30)
-    model = RNN(hidden_size=cfg['RNN_hidden_units']).cuda().train()
+    # model = RNN(hidden_size=cfg['RNN_hidden_units']).cuda().train()
+    model = Classifier().cuda().train()
     optimiser = Adam(model.parameters(), lr=cfg['learning_rate'], weight_decay=cfg['weight_decay'])
 
     train_dataset = TweetDataset(dataset_type='train')
@@ -82,13 +110,8 @@ def train_RNN():
         for batch_idx, batch in enumerate(train_loader):
             optimiser.zero_grad()
 
-            # inference
-            target = batch['target'].cuda()
-            model_input = batch['embedding'].cuda()
-            model_output = model(model_input)
-
-            # loss
-            loss = MSE(target, model_output)  # testing MSE and not MAE
+            # loss = infer_RNN(model, batch, MSE)
+            loss = infer_Classifier(model, batch)
             loss.backward()
 
             if epoch == 0 and batch_idx == 0:
@@ -134,20 +157,27 @@ def train_RNN():
 
 
 if __name__ == '__main__':
-    val_dataset = TweetDataset(dataset_type='train')
-    val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'], num_workers=cfg['workers'],
-                            collate_fn=collate_function, shuffle=False, pin_memory=True)
-    checkpoint = torch.load("checkpoints/test/epoch_19.pth")
-    model = RNN(hidden_size=cfg['RNN_hidden_units'])
-    model.load_state_dict(checkpoint['model'])
-    model = model.eval().cuda()
-
-    for batch in val_loader:
-        target = batch['target'].cuda()
-        model_input = batch['embedding'].cuda()
-        model_output = model(model_input)
-        print(model_output[:100])
-        print('\n')
-        print(target)
-        break
-    #train_RNN()
+    # val_dataset = TweetDataset(dataset_type='train')
+    # val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'], num_workers=cfg['workers'],
+    #                         collate_fn=collate_function, shuffle=False, pin_memory=True)
+    # checkpoint = torch.load("checkpoints/test_classifier_10/epoch_0.pth")
+    # #model = RNN(hidden_size=cfg['RNN_hidden_units'])
+    # model = Classifier()
+    # model.load_state_dict(checkpoint['model'])
+    # model = model.eval().cuda()
+    #
+    # for batch in val_loader:
+    #     # inference
+    #     t = 10
+    #     target = batch['target'].unsqueeze(1)
+    #     target[target < t] = 0.
+    #     target[target >= t] = 1.
+    #     target = target.cuda()
+    #     numeric = batch['numeric'].cuda()
+    #     model_output = model(numeric)
+    #     dt = torch.zeros(model_output.shape, device='cuda')
+    #     dt[model_output>0.5] = 1
+    #     print("P/R", precision_recall(dt, target))
+    #
+    #     break
+    train_RNN()
