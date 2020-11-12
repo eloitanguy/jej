@@ -39,18 +39,17 @@ class TweetDataset(Dataset):
         assert dataset_type in ['train', 'val', 'validation'], "Please provide a valid "
         with open(cfg['csv_relative_path'], newline='') as csvfile:
             if dataset_type == 'train':
-                self.data = list(csv.reader(csvfile))[:DATASET_SPLIT]
+                self.data = list(csv.reader(csvfile))[1:DATASET_SPLIT]
             else:
                 self.data = list(csv.reader(csvfile))[DATASET_SPLIT:]
 
     def __len__(self):
-        return len(self.data) - 1
+        return len(self.data)
 
     def __getitem__(self, idx):
-        line = self.data[idx + 1]  # the first line is the column names
+        line = self.data[idx]  # the first line is the column names
 
         numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']]),
-                                     int(line[COLUMN_NAME_TO_IDX['retweet_count']]),
                                      int(line[COLUMN_NAME_TO_IDX['user_verified']] == 'True'),
                                      int(line[COLUMN_NAME_TO_IDX['user_statuses_count']]),
                                      int(line[COLUMN_NAME_TO_IDX['user_followers_count']]),

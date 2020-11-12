@@ -1,5 +1,5 @@
 DATASET_CONFIG = {
-    'train_percent': 0.9, # the rest will be used for validation
+    'train_percent': 0.9,  # the rest will be used for validation
     'csv_relative_path': 'data/train.csv'
 }
 

@@ -1,7 +1,6 @@
 from torch.nn import Module
 from torch import nn
 import torch
-from torch.nn.functional import gelu
 
 
 class NumericModel(Module):
@@ -46,7 +45,7 @@ class RNN(Module):
         lin_in = torch.cat((forward_outs, backward_outs), dim=1)
         lin_in = self.prelu(lin_in)
 
-        return torch.exp(self.linear(lin_in))  # added exp to ensure positive values
+        return self.linear(lin_in)  # added exp to ensure positive values
 
 
 if __name__ == '__main__':

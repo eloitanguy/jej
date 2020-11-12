@@ -109,7 +109,7 @@ def train_RNN():
             # saving the model
             if step % cfg['checkpoint_every'] == 0:
                 checkpoint_name = '{}/epoch_{}.pth'.format(checkpoint_folder, epoch)
-                torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': loader_length, 'step': step,
+                torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': batch_idx, 'step': step,
                             'optimiser': optimiser.state_dict(), 'config': cfg}, checkpoint_name)
 
             # validating
@@ -134,10 +134,10 @@ def train_RNN():
 
 
 if __name__ == '__main__':
-    val_dataset = TweetDataset(dataset_type='val')
+    val_dataset = TweetDataset(dataset_type='train')
     val_loader = DataLoader(val_dataset, batch_size=cfg['batch_size'], num_workers=cfg['workers'],
                             collate_fn=collate_function, shuffle=False, pin_memory=True)
-    checkpoint = torch.load("checkpoints/test/epoch_3.pth")
+    checkpoint = torch.load("checkpoints/test/epoch_19.pth")
     model = RNN(hidden_size=cfg['RNN_hidden_units'])
     model.load_state_dict(checkpoint['model'])
     model = model.eval().cuda()
@@ -147,5 +147,7 @@ if __name__ == '__main__':
         model_input = batch['embedding'].cuda()
         model_output = model(model_input)
         print(model_output[:100])
+        print('\n')
+        print(target)
         break
-    # train_RNN()
+    #train_RNN()
