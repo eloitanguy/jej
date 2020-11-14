@@ -15,6 +15,14 @@ COLUMN_IDX_TO_NAME = ['id', 'timestamp', 'retweet_count', 'user_verified', 'user
 
 COLUMN_NAME_TO_IDX = {COLUMN_IDX_TO_NAME[idx]: idx for idx, name in enumerate(COLUMN_IDX_TO_NAME)}
 
+MEANS = {'user_statuses_count': 41662.484375,
+         'user_followers_count': 232645.125,
+         'user_friends_count': 2737.07421875}
+
+STDS = {'user_statuses_count': 98392.1584,
+        'user_followers_count': 2438640.574379095,
+        'user_friends_count': 17252.172964586}
+
 GLOVE = torchtext.vocab.GloVe(dim=300)  # embedding dimension is emb_dim = 300 here
 
 cfg = DATASET_CONFIG
@@ -49,12 +57,17 @@ class TweetDataset(Dataset):
     def __getitem__(self, idx):
         line = self.data[idx]  # the first line is the column names
 
-        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']]) % (3600 * 24)/(3600 * 24),
-                                     int(line[COLUMN_NAME_TO_IDX['user_verified']] == 'True'),
-                                     int(line[COLUMN_NAME_TO_IDX['user_statuses_count']]),
-                                     int(line[COLUMN_NAME_TO_IDX['user_followers_count']]),
-                                     int(line[COLUMN_NAME_TO_IDX['user_friends_count']])
+        # normalising all values between -1 and 1
+        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']]) % (3600 * 24) / (3600 * 24 / 2) - 1,
+                                     int(line[COLUMN_NAME_TO_IDX['user_verified']] == 'True') * 2 - 1,
+                                     (int(line[COLUMN_NAME_TO_IDX['user_statuses_count']]) -
+                                      MEANS['user_statuses_count'])/STDS['user_statuses_count'],
+                                     (int(line[COLUMN_NAME_TO_IDX['user_followers_count']]) -
+                                      MEANS['user_followers_count'])/STDS['user_followers_count'],
+                                     (int(line[COLUMN_NAME_TO_IDX['user_friends_count']]) -
+                                      MEANS['user_friends_count'])/STDS['user_friends_count']
                                      ])
+
         text_str = line[COLUMN_NAME_TO_IDX['text']]
         text_word_list = text_str.split(' ')
         text_embedding = GLOVE.get_vecs_by_tokens(text_word_list, lower_case_backup=True)  # shape (text_size, emb_dim)
