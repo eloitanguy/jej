@@ -41,15 +41,28 @@ class TweetDataset(Dataset):
     dataset_type indicates what to build: \n
     * 'train' ->the training set (examples in [0, DATASET_SPLIT[) \n
     * 'val' or 'validation' -> the validation set (examples in [DATASET_SPLIT, ...[
+    * 'remove_zero': removes the tweets with 0 RTs
     """
 
     def __init__(self, dataset_type='train'):
-        assert dataset_type in ['train', 'val', 'validation'], "Please provide a valid "
-        with open(cfg['csv_relative_path'], newline='') as csvfile:
-            if dataset_type == 'train':
-                self.data = list(csv.reader(csvfile))[1:DATASET_SPLIT]
-            else:
-                self.data = list(csv.reader(csvfile))[DATASET_SPLIT:]
+        assert dataset_type in ['train', 'val', 'validation', 'test', 'all'], "Please provide a valid dataset type"
+
+        if dataset_type != 'test':
+            with open(cfg['csv_relative_path'], newline='') as csvfile:
+                if dataset_type == 'train':
+                    self.data = list(csv.reader(csvfile))[1:DATASET_SPLIT]
+                elif dataset_type == 'all':
+                    self.data = list(csv.reader(csvfile))[1:]
+                else:
+                    self.data = list(csv.reader(csvfile))[DATASET_SPLIT:]
+            self.test = False
+        else:
+            with open(cfg['test_csv_relative_path'], newline='') as csvfile:
+                self.data = list(csv.reader(csvfile))[1:]
+                self.test = True
+
+        if cfg['remove_zero'] and not self.test:
+            self.data = [line for line in self.data if int(line[COLUMN_NAME_TO_IDX['retweet_count']]) != 0]
 
     def __len__(self):
         return len(self.data)
@@ -58,22 +71,25 @@ class TweetDataset(Dataset):
         line = self.data[idx]  # the first line is the column names
 
         # normalising all values between -1 and 1
-        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']]) % (3600 * 24) / (3600 * 24 / 2) - 1,
-                                     int(line[COLUMN_NAME_TO_IDX['user_verified']] == 'True') * 2 - 1,
-                                     (int(line[COLUMN_NAME_TO_IDX['user_statuses_count']]) -
-                                      MEANS['user_statuses_count'])/STDS['user_statuses_count'],
-                                     (int(line[COLUMN_NAME_TO_IDX['user_followers_count']]) -
-                                      MEANS['user_followers_count'])/STDS['user_followers_count'],
-                                     (int(line[COLUMN_NAME_TO_IDX['user_friends_count']]) -
-                                      MEANS['user_friends_count'])/STDS['user_friends_count']
+        offset = 1 if self.test else 0  # in the test file there is no retweet column -> offsetting the indices
+        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']])
+                                     / 1000 % (3600 * 24) / (3600 * 24 / 2) - 1,
+                                     int(line[COLUMN_NAME_TO_IDX['user_verified'] - offset] == 'True') * 2 - 1,
+                                     (int(line[COLUMN_NAME_TO_IDX['user_statuses_count'] - offset]) -
+                                      MEANS['user_statuses_count']) / STDS['user_statuses_count'],
+                                     (int(line[COLUMN_NAME_TO_IDX['user_followers_count'] - offset]) -
+                                      MEANS['user_followers_count']) / STDS['user_followers_count'],
+                                     (int(line[COLUMN_NAME_TO_IDX['user_friends_count'] - offset]) -
+                                      MEANS['user_friends_count']) / STDS['user_friends_count']
                                      ])
 
-        text_str = line[COLUMN_NAME_TO_IDX['text']]
+        text_str = line[COLUMN_NAME_TO_IDX['text'] - offset]
         text_word_list = text_str.split(' ')
         text_embedding = GLOVE.get_vecs_by_tokens(text_word_list, lower_case_backup=True)  # shape (text_size, emb_dim)
 
         return {'numeric': numeric_data, 'text_emb': text_embedding,
-                'target': int(line[COLUMN_NAME_TO_IDX['retweet_count']])}
+                'target': int(line[COLUMN_NAME_TO_IDX['retweet_count']]) if not self.test else 0
+                }
 
 
 def collate_function(data):

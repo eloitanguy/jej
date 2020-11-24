@@ -2,6 +2,7 @@ from torch.nn import Module
 from torch import nn
 import torch
 from config import RNN_CONFIG
+from torch import relu
 
 
 class NumericModel(Module):
@@ -18,12 +19,6 @@ class NumericModel(Module):
 
 
 class RNN(Module):
-    """
-    TODO
-    A simple recurrent neural network (GRU + linear for output) taking the tweet text and giving a retweet count \n
-    * emb_dim: embedding dimension, where the input tensor of of shape [batch, sequence, emb_dim] \n
-    * hidden_size: number of output features of the GRU (it's bidirectional so this will be doubled)
-    """
     def __init__(self, config=None):
         super(RNN, self).__init__()
         if not config:
@@ -34,12 +29,18 @@ class RNN(Module):
                           num_layers=config['layers'], batch_first=True, bidirectional=True,
                           dropout=config['dropout'])
         gru_out_size = 2*config['hidden_size']*config['layers']
-        self.prelu1 = nn.PReLU(num_parameters=gru_out_size)
         # takes the activated gru output and the numeric data as input
+        self.prelu1 = nn.PReLU(num_parameters=gru_out_size+config['numeric_data_size'])
         self.linear1 = nn.Linear(in_features=gru_out_size+config['numeric_data_size'],
-                                 out_features=config['linear_hidden_size'])
-        self.prelu2 = nn.PReLU(num_parameters=config['linear_hidden_size'])
-        self.linear2 = nn.Linear(in_features=config['linear_hidden_size'], out_features=1)
+                                 out_features=config['linear_hidden_1'])
+
+        self.prelu2 = nn.PReLU(num_parameters=config['linear_hidden_1'])
+        self.linear2 = nn.Linear(in_features=config['linear_hidden_1'],
+                                 out_features=config['linear_hidden_2'])
+
+        self.prelu3 = nn.PReLU(num_parameters=config['linear_hidden_2'])
+        self.linear3 = nn.Linear(in_features=config['linear_hidden_2'],
+                                 out_features=1)
 
     def forward(self, text_embedding, numeric_data):
         # expects x of shape (batch, sequence, features)
@@ -49,11 +50,13 @@ class RNN(Module):
         rnn_out = rnn_out.transpose(0, 1).reshape(batch, self.config['layers']*2*self.config['hidden_size'])
 
         # concatenating the numeric data
-        lin_in = torch.cat((self.prelu1(rnn_out), numeric_data), dim=1)
-        out = self.linear1(lin_in)
+        lin_in = torch.cat((relu(rnn_out), numeric_data), dim=1)
+        out = self.linear1(self.prelu1(lin_in))
         out = self.linear2(self.prelu2(out))
+        hidden = self.prelu3(out)
+        out = self.linear3(hidden)
 
-        return torch.exp(out) if not self.config['classifier'] else torch.sigmoid(out)
+        return relu(out) if not self.config['classifier'] else out, hidden
 
 
 class Classifier(Module):

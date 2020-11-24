@@ -3,29 +3,55 @@ from dataset import TweetDataset, collate_function
 from tensorboardX import SummaryWriter
 from torch.optim import Adam
 from models import RNN, Classifier
-from config import TRAIN_CONFIG
+from config import TRAIN_CONFIG, DATASET_CONFIG
 from modules import printProgressBar, AverageMeter, MAE, MSE, precision_recall
 from torch.utils.data import DataLoader
 import time
 import datetime
 import os
-from torch.nn import BCELoss, L1Loss
+from torch.nn import BCEWithLogitsLoss, L1Loss, MSELoss
 
 cfg = TRAIN_CONFIG
 
 
-def infer_RNN(model, batch, loss_fun):
+def infer_RNN(model, batch):
+    loss_fun = L1Loss()
     # inference
-    target = batch['target'].cuda().unsqueeze(1)
+    target = batch['target'].cuda().unsqueeze(1).float()
     numeric = batch['numeric'].cuda()
     model_input = batch['embedding'].cuda()
     model_output = model(model_input, numeric)
 
     # loss
-    return loss_fun(model_output, target)  # still validating on MAE
+    return loss_fun(model_output, target)
 
 
-def infer_Classifier(model, batch, loss_fun):
+def infer_logRNN(model, batch):
+    loss_fun = MSELoss()
+    # inference
+    target = batch['target'].cuda().unsqueeze(1).float()
+    numeric = batch['numeric'].cuda()
+    model_input = batch['embedding'].cuda()
+    model_output = model(model_input, numeric)
+
+    # loss
+    return loss_fun(model_output, torch.log(1 + target))  # Add 5 for centering on e^5
+
+
+def eval_logRNN(model, batch):
+    loss_fun = L1Loss()
+    # inference
+    target = batch['target'].cuda().squeeze().float()
+    numeric = batch['numeric'].cuda()
+    model_input = batch['embedding'].cuda()
+    model_output = model(model_input, numeric).squeeze()
+
+    # loss
+    return loss_fun(torch.exp(model_output) - 1, target)
+
+
+def infer_Classifier(model, batch):
+    loss_fun = BCEWithLogitsLoss()
     t = 1
     target = batch['target'].unsqueeze(1)
     target[target < t] = 0.
@@ -33,20 +59,22 @@ def infer_Classifier(model, batch, loss_fun):
     target = target.cuda()
     numeric = batch['numeric'].cuda()
     model_input = batch['embedding'].cuda()
-    model_output = model(model_input, numeric)
+    model_output, _ = model(model_input, numeric)
 
     return loss_fun(model_output.float(), target.float())
 
 
-def val(model, val_loader, writer, step, infer, loss_fun):
+def val(model, val_loader, writer, step, infer):
     """
     Computes the loss on the validation set and logs it to tensorboard \n
     The loss is computed on a fixed subset with the first [val_batches] batches, defined in config file
     """
     print('\n')
-    model = model.eval()
+    model.eval()
+    val_losses = []
+    n = len(val_loader)
+
     with torch.no_grad():
-        total_val_loss = 0.
         for batch_idx, batch in enumerate(val_loader):
 
             # run only on a subset
@@ -54,20 +82,20 @@ def val(model, val_loader, writer, step, infer, loss_fun):
                 break
 
             # loss = infer_RNN(model, batch, MAE)
-            loss = infer(model, batch, loss_fun)
+            batch_val_loss = infer(model, batch).item()
 
             # log
-            printProgressBar(batch_idx, cfg['val_batches'], suffix='\tValidation ...')
+            printProgressBar(batch_idx, min(n, cfg['val_batches']), suffix='\tValidation ...')
 
-            total_val_loss += loss
+            val_losses.append(batch_val_loss)
 
-    val_loss = total_val_loss / cfg['val_batches']
+        val_loss = sum(val_losses) / len(val_losses)
     writer.add_scalar('Steps/val_loss', val_loss, step)
     print('\n')
     print('Finished validation with loss {:4f}'.format(val_loss))
 
 
-def train(model, infer, train_loss_fun, val_loss_fun, load_checkpoint=None):
+def train(model, infer_train, infer_val, load_checkpoint=None):
     """ Train the RNN model using the parameters defined in the config file """
     print('Initialising {}'.format(cfg['experiment_name']))
     checkpoint_folder = 'checkpoints/{}/'.format(cfg['experiment_name'])
@@ -106,6 +134,11 @@ def train(model, infer, train_loss_fun, val_loss_fun, load_checkpoint=None):
 
     init_loss = 0.
     avg_loss = AverageMeter()
+
+    print('Sanity val')
+    val(model, val_loader, writer, 0, infer_val)
+    model.train()
+
     print('Starting training')
     for epoch in range(start_epoch, epochs):
         loader_length = len(train_loader)
@@ -114,7 +147,7 @@ def train(model, infer, train_loss_fun, val_loss_fun, load_checkpoint=None):
         for batch_idx, batch in enumerate(train_loader):
             optimiser.zero_grad()
 
-            loss = infer(model, batch, train_loss_fun)
+            loss = infer_train(model, batch)
             loss.backward()
 
             if epoch == 0 and batch_idx == 0:
@@ -135,17 +168,17 @@ def train(model, infer, train_loss_fun, val_loss_fun, load_checkpoint=None):
             # saving the model
             if step % cfg['checkpoint_every'] == 0:
                 checkpoint_name = '{}/epoch_{}.pth'.format(checkpoint_folder, epoch)
-                torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': loader_length, 'step': step,
-                            'optimiser': optimiser.state_dict(), 'train_config': cfg, 'net_config': model.config},
+                torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': batch_idx, 'step': step,
+                            'optimiser': optimiser.state_dict(), 'train_config': cfg, 'net_config': model.config,
+                            'dataset_config': DATASET_CONFIG},
                            checkpoint_name)
+            step += 1
+            optimiser.step()
 
             # validating
             if step % cfg['val_every'] == 0:
-                val(model, val_loader, writer, step, infer, val_loss_fun)
-                model = model.train()
-
-            step += 1
-            optimiser.step()
+                val(model, val_loader, writer, step, infer_val)
+                model.train()
 
         # end of epoch
         print('')
@@ -153,7 +186,8 @@ def train(model, infer, train_loss_fun, val_loss_fun, load_checkpoint=None):
         avg_loss.reset()
         checkpoint_name = '{}/epoch_{}.pth'.format(checkpoint_folder, epoch)
         torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': loader_length, 'step': step,
-                    'optimiser': optimiser.state_dict(), 'train_config': cfg, 'net_config': model.config},
+                    'optimiser': optimiser.state_dict(), 'train_config': cfg, 'net_config': model.config,
+                    'dataset_config': DATASET_CONFIG},
                    checkpoint_name)
 
     # finished training
@@ -163,4 +197,4 @@ def train(model, infer, train_loss_fun, val_loss_fun, load_checkpoint=None):
 
 if __name__ == '__main__':
     net = RNN().train().cuda()
-    train(net, infer_Classifier, BCELoss(), BCELoss())  #, load_checkpoint='checkpoints/test_new_rnn_3/epoch_9.pth')
+    train(net, infer_Classifier, infer_Classifier)
