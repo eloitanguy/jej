@@ -32,12 +32,12 @@ XGBOOST_CONFIG = {
     'train_file': 'data/xgboost_dataset_train.npy',
     'val_file': 'data/xgboost_dataset_val.npy',
     'embedder': 'checkpoints/embedder/epoch_1.pth',
-    'colsample_bytree': 0.2,  # percentage of features used per tree.
+    'colsample_bytree': 0.5,  # percentage of features used per tree.
     'n_estimators': 200,  # number of trees
-    'max_depth': 20,  # max tree depth
-    'learning_rate': 0.2,  # in [0,1]
+    'max_depth': 5,  # max tree depth
+    'learning_rate': 0.5,  # in ]0,1]
     'alpha': 0,  # L1 regularisation
     'reg_lambda': 200,  # L2 regularisation
-    'experiment_name': 'xgb_1',
+    'experiment_name': 'xgb_14',
     'log': True
 }

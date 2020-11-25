@@ -10,6 +10,7 @@ from config import XGBOOST_CONFIG, TRAIN_CONFIG
 import xgboost as xgb
 import argparse
 import os
+import json
 
 
 def prepare_datasets():
@@ -31,7 +32,7 @@ def prepare_datasets():
         data[i, 2] = int(entry[COLUMN_NAME_TO_IDX['user_statuses_count']])
         data[i, 3] = int(entry[COLUMN_NAME_TO_IDX['user_followers_count']])
         data[i, 4] = int(entry[COLUMN_NAME_TO_IDX['user_friends_count']])
-        data[i, -1] = int(int(entry[COLUMN_NAME_TO_IDX['retweet_count']]))
+        data[i, -1] = int(entry[COLUMN_NAME_TO_IDX['retweet_count']])
 
     # add RNN embeddings here to train_data
     dataset = TweetDataset('all')
@@ -88,6 +89,8 @@ def train():
     if not os.path.exists(checkpoint_folder):
         os.makedirs(checkpoint_folder)
     xg_reg.save_model('{}/checkpoint.model'.format(checkpoint_folder))
+    with open('{}/model_params.json'.format(checkpoint_folder), 'w') as f:
+        json.dump(XGBOOST_CONFIG, f, indent=4)
 
 
 if __name__ == '__main__':
