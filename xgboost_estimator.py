@@ -1,12 +1,10 @@
 import numpy as np
-from config import DATASET_CONFIG
-import csv
-from dataset import COLUMN_NAME_TO_IDX, TweetDataset, collate_function, DATASET_SPLIT
+from dataset import TweetDataset, collate_function, DATASET_SPLIT
 from modules import printProgressBar
 from torch.utils.data import DataLoader
 import torch
 from models import RNN
-from config import XGBOOST_CONFIG, TRAIN_CONFIG
+from config import XGBOOST_CONFIG, TRAIN_CONFIG, DATASET_CONFIG
 import xgboost as xgb
 import argparse
 import os
@@ -19,7 +17,7 @@ def prepare_datasets():
     embed.load_state_dict(checkpoint['model'])
     embed = embed.cuda()
 
-    dataset = TweetDataset('all')
+    dataset = TweetDataset(dataset_type='all')
     N = len(dataset)
     data = np.zeros((N, 5 + 20 + 1))  # 20 is rnn embedding, 1 for answer
     loader = DataLoader(dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
@@ -41,8 +39,9 @@ def prepare_datasets():
 
         current_idx += batch_size
 
-    np.save(XGBOOST_CONFIG['train_file'], data[1:DATASET_SPLIT])
-    np.save(XGBOOST_CONFIG['val_file'], data[DATASET_SPLIT:])
+    split = int(N * DATASET_CONFIG['train_percent'])
+    np.save(XGBOOST_CONFIG['train_file'], data[1:split])
+    np.save(XGBOOST_CONFIG['val_file'], data[split:])
 
 
 def train():

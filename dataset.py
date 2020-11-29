@@ -4,6 +4,10 @@ from torch.nn.utils.rnn import pad_sequence
 import csv
 import torchtext
 from config import DATASET_CONFIG
+from modules import printProgressBar
+from config import AE_CONFIG
+from _collections import OrderedDict
+import json
 
 # ---------------------
 # ----- Constants -----
@@ -62,6 +66,7 @@ class TweetDataset(Dataset):
                 self.test = True
 
         if cfg['remove_zero'] and not self.test:
+            print('Removing tweets with 0 RT')
             self.data = [line for line in self.data if int(line[COLUMN_NAME_TO_IDX['retweet_count']]) != 0]
 
     def __len__(self):
@@ -104,6 +109,26 @@ def collate_function(data):
     return {'numeric': numeric, 'target': target, 'embedding': embeddings}
 
 
+def create_vocabulary():
+    with open(cfg['csv_relative_path'], newline='') as csvfile:
+        data = list(csv.reader(csvfile))[1:]
+
+    vocab = {}
+
+    for idx, line in enumerate(data[:AE_CONFIG['vocab_using_n_tweets']]):
+        printProgressBar(idx, AE_CONFIG['vocab_using_n_tweets'], 'creating dictionary')
+        for word in line[COLUMN_NAME_TO_IDX['text']].lower().split(' '):
+            if word in vocab.keys():
+                vocab[word] += 1
+            else:
+                vocab[word] = 1
+
+    # sort the vocabulary by descending occurrences
+    vocab = [k for k, _ in sorted(vocab.items(), key=lambda item: item[1], reverse=True)][:AE_CONFIG['AE_vocab_size']]
+
+    with open('data/vocab.json', 'w') as f:
+        json.dump(vocab, f, indent=4)
+
+
 if __name__ == '__main__':
-    train_set = TweetDataset(dataset_type='val')
-    print(len(train_set))
+    create_vocabulary()
