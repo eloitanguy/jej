@@ -34,10 +34,10 @@ XGBOOST_CONFIG = {
     'embedder': 'checkpoints/embedder/epoch_1.pth',
     'colsample_bytree': 0.5,  # percentage of features used per tree.
     'n_estimators': 200,  # number of trees
-    'max_depth': 5,  # max tree depth
+    'max_depth': 10,  # max tree depth
     'learning_rate': 0.5,  # in ]0,1]
     'alpha': 0,  # L1 regularisation
     'reg_lambda': 200,  # L2 regularisation
-    'experiment_name': 'xgb_14',
+    'experiment_name': 'xgb_standard',
     'log': True
 }

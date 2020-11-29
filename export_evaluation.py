@@ -102,6 +102,7 @@ def export_xgb_regressor(experiment_name):
             text_data = embedding.detach().cpu().numpy()  # (batch_size, emb_size)
             numeric_data = xgb_data[current_idx:current_idx+batch_size, :]  # (batch_size, emb_size)
             xgb_in = np.concatenate([numeric_data, text_data], axis=1)
+
             prediction = np.exp(xg_reg.predict(xgb_in))-1
 
             for idx_in_batch in range(batch_size):
