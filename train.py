@@ -197,4 +197,4 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
 
 if __name__ == '__main__':
     net = RNN().train().cuda()
-    train(net, infer_Classifier, infer_Classifier)
+    train(net, infer_logRNN, eval_logRNN)

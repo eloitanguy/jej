@@ -37,7 +37,7 @@ def export_RNN_regressor(checkpoint_path):
 
             numeric = batch['numeric'].cuda()
             text = batch['embedding'].cuda()
-            prediction = model(text, numeric)
+            prediction = torch.exp(model(text, numeric)) - 1
 
             for idx_in_batch in range(batch_size):
                 writer.writerow([str(ids[current_idx + idx_in_batch]), str(int(prediction[idx_in_batch].item()))])

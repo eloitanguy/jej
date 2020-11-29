@@ -8,6 +8,7 @@ from modules import printProgressBar
 from config import RNN_CONFIG
 import json
 from nltk.stem import PorterStemmer
+from _collections import OrderedDict
 
 # ---------------------
 # ----- Constants -----
@@ -69,6 +70,11 @@ class TweetDataset(Dataset):
             print('Removing tweets with 0 RT')
             self.data = [line for line in self.data if int(line[COLUMN_NAME_TO_IDX['retweet_count']]) != 0]
 
+        if RNN_CONFIG['use_AE']:  # in this case we need to use the vocabulary in order to convert the words to indices
+            with open(cfg['vocab_relative_path'], 'r') as f:
+                self.vocab = json.load(f)
+                self.ps = PorterStemmer()
+
     def __len__(self):
         return len(self.data)
 
@@ -89,8 +95,12 @@ class TweetDataset(Dataset):
                                      ])
 
         text_str = line[COLUMN_NAME_TO_IDX['text'] - offset]
-        text_word_list = text_str.split(' ')
-        text_embedding = GLOVE.get_vecs_by_tokens(text_word_list, lower_case_backup=True)  # shape (text_size, emb_dim)
+        text_word_list = text_str.lower().split(' ')
+
+        if not RNN_CONFIG['use_AE']:  # the text data is a GloVe embedding of shape (text_size, emb_dim)
+            text_embedding = GLOVE.get_vecs_by_tokens(text_word_list, lower_case_backup=True)
+        else:  # the text data is an array of word indices fed to the auto-encoder, shape (text_size, emb_dim)
+            text_embedding = torch.tensor([get_word_index(self.ps.stem(w), self.vocab) for w in text_word_list])
 
         return {'numeric': numeric_data, 'text_emb': text_embedding,
                 'target': int(line[COLUMN_NAME_TO_IDX['retweet_count']]) if not self.test else 0
@@ -103,6 +113,7 @@ def collate_function(data):
     target = torch.stack([torch.tensor(data[idx]['target']) for idx in range(batch_size)])
 
     # We need to pad them to the same size in order to give a batch input to the RNN
+    # notice that padding with zeros will work both for GloVe vector embeddings and indices
     embeddings = pad_sequence([data[idx]['text_emb'] for idx in range(batch_size)],
                               batch_first=True)
 
@@ -120,16 +131,33 @@ def create_vocabulary():
         printProgressBar(idx, RNN_CONFIG['vocab_using_n_tweets'], 'creating dictionary')
         for word in line[COLUMN_NAME_TO_IDX['text']].lower().split(' '):
             w = ps.stem(word)
-            if w in vocab.keys():
+            if w in vocab:
                 vocab[w] += 1
             else:
                 vocab[w] = 1
 
     # sort the vocabulary by descending occurrences
-    vocab = [k for k, _ in sorted(vocab.items(), key=lambda item: item[1], reverse=True)][:RNN_CONFIG['AE_vocab_size']]
+    vocab = OrderedDict(
+        [(k, idx) for idx, (k, _) in
+         enumerate(sorted(vocab.items(), key=lambda item: item[1], reverse=True)[:RNN_CONFIG['AE_vocab_size']])
+         ]
+    )
 
     with open('data/vocab.json', 'w') as f:
         json.dump(vocab, f, indent=4)
+
+
+def get_word_index(word, vocabulary):
+    """
+    :param word: a string
+    :param vocabulary: a dictionary (key: word, item: index)
+    :return: the index of the word in the vocabulary
+    """
+
+    if word in vocabulary:
+        return vocabulary[word] + 1  # the index 0 is for unknown words
+    else:
+        return 0
 
 
 if __name__ == '__main__':

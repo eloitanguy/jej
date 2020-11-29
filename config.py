@@ -2,23 +2,24 @@ DATASET_CONFIG = {
     'train_percent': 0.9,  # the rest will be used for validation
     'csv_relative_path': 'data/train.csv',
     'test_csv_relative_path': 'data/evaluation.csv',
-    'remove_zero': False  # Impacts the XGB data preparation as well!
+    'remove_zero': False,  # Impacts the XGB data preparation as well!
+    'vocab_relative_path': 'data/vocab.json'
 }
 
 TRAIN_CONFIG = {
     'batch_size': 512,
-    'learning_rate': 1e-3,
-    'weight_decay': 0,
+    'learning_rate': 1e-2,
+    'weight_decay': 1e-4,
     'workers': 6,
-    'experiment_name': 'latest_classifier_1',
-    'epochs': 2,
+    'experiment_name': 'AE_1',
+    'epochs': 5,
     'checkpoint_every': 100,
     'val_every': 200,
     'val_batches': 1000
 }
 
 RNN_CONFIG = {
-    'hidden_size': 64,
+    'hidden_size': 128,
     'layers': 3,
     'emb_dim': 300,
     'numeric_data_size': 5,
@@ -28,8 +29,7 @@ RNN_CONFIG = {
     'classifier': False,
     'use_AE': True,
     'vocab_using_n_tweets': 50000,
-    'AE_vocab_size': 10000,
-    'AE_embedding_size': 300
+    'AE_vocab_size': 10000  # excludes the 'unknown token' which is at 0
 }
 
 XGBOOST_CONFIG = {

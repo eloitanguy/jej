@@ -25,8 +25,8 @@ class RNN(Module):
             config = RNN_CONFIG
         self.config = config
 
-        if config['use_AE']:
-            self.emb = Embedding()
+        if config['use_AE']:  # creating an embedding layer since we want an auto-encoder (+1 for the unknown word)
+            self.emb = Embedding(num_embeddings=config['AE_vocab_size'] + 1, embedding_dim=config['emb_dim'])
 
         self.GRU = nn.GRU(input_size=config['emb_dim'], hidden_size=config['hidden_size'],
                           num_layers=config['layers'], batch_first=True, bidirectional=True,
@@ -45,9 +45,15 @@ class RNN(Module):
         self.linear3 = nn.Linear(in_features=config['linear_hidden_2'],
                                  out_features=1)
 
-    def forward(self, text_embedding, numeric_data):
-        # expects x of shape (batch, sequence, features)
+    def forward(self, x, numeric_data):
+
+        if self.config['use_AE']:  # if the model has an AE, expects word indices of shape (batch, sequence)
+            text_embedding = self.emb(x)
+        else:  # otherwise they are expected to be GloVe embeddings, expects x of shape (batch, sequence, features)
+            text_embedding = x
+
         batch, seq, _ = text_embedding.shape
+
         _, rnn_out = self.GRU(text_embedding)  # shape (layers*2, batch, hidden_size)
         # to shape (batch, layers*2*hidden_size)
         rnn_out = rnn_out.transpose(0, 1).reshape(batch, self.config['layers']*2*self.config['hidden_size'])
@@ -59,7 +65,10 @@ class RNN(Module):
         hidden = self.prelu3(out)
         out = self.linear3(hidden)
 
-        return relu(out) if not self.config['classifier'] else out, hidden
+        if self.config['classifier']:
+            return out, hidden
+        else:
+            return relu(out)
 
 
 class Classifier(Module):
