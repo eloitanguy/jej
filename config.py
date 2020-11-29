@@ -2,7 +2,7 @@ DATASET_CONFIG = {
     'train_percent': 0.9,  # the rest will be used for validation
     'csv_relative_path': 'data/train.csv',
     'test_csv_relative_path': 'data/evaluation.csv',
-    'remove_zero': True  # Impacts the XGB data preparation as well!
+    'remove_zero': False  # Impacts the XGB data preparation as well!
 }
 
 TRAIN_CONFIG = {
@@ -25,7 +25,11 @@ RNN_CONFIG = {
     'dropout': 0.1,
     'linear_hidden_1': 15,
     'linear_hidden_2': 20,
-    'classifier': True
+    'classifier': False,
+    'use_AE': True,
+    'vocab_using_n_tweets': 50000,
+    'AE_vocab_size': 10000,
+    'AE_embedding_size': 300
 }
 
 XGBOOST_CONFIG = {
@@ -40,13 +44,6 @@ XGBOOST_CONFIG = {
     'reg_lambda': 200,  # L2 regularisation
     'experiment_name': 'xgb_nonzero',
     'log': True,
-    'remove_zero': True,  # /!\ this affects only the exportation and not the dataset preparation
+    'remove_zero': False,  # /!\ this affects only the exportation and not the dataset preparation
     'remove_zero_threshold': 0.5
-}
-
-AE_CONFIG = {
-    'use_AE': True,
-    'vocab_using_n_tweets': 50000,
-    'AE_vocab_size': 10000,
-    'AE_embedding_size': 300
 }

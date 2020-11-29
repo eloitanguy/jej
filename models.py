@@ -1,4 +1,4 @@
-from torch.nn import Module
+from torch.nn import Module, Embedding
 from torch import nn
 import torch
 from config import RNN_CONFIG
@@ -24,6 +24,9 @@ class RNN(Module):
         if not config:
             config = RNN_CONFIG
         self.config = config
+
+        if config['use_AE']:
+            self.emb = Embedding()
 
         self.GRU = nn.GRU(input_size=config['emb_dim'], hidden_size=config['hidden_size'],
                           num_layers=config['layers'], batch_first=True, bidirectional=True,
