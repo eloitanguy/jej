@@ -4,7 +4,7 @@ import csv
 from dataset import TweetDataset, collate_function, COLUMN_NAME_TO_IDX
 from modules import printProgressBar
 from torch.utils.data import DataLoader
-from config import TRAIN_CONFIG, DATASET_CONFIG, XGBOOST_CONFIG
+from config import TRAIN_CONFIG, DATASET_CONFIG, XGBOOST_CONFIG, EXPORT_CONFIG
 import xgboost as xgb
 import json
 import numpy as np
@@ -37,7 +37,10 @@ def export_RNN_regressor(checkpoint_path):
 
             numeric = batch['numeric'].cuda()
             text = batch['embedding'].cuda()
-            prediction = torch.exp(model(text, numeric)) - 1
+            prediction = torch.exp(model(text, numeric)) - 1 if EXPORT_CONFIG['log'] else model(text, numeric)
+
+            if EXPORT_CONFIG['threshold']:
+                prediction[prediction > EXPORT_CONFIG['threshold']] = EXPORT_CONFIG['threshold']
 
             for idx_in_batch in range(batch_size):
                 writer.writerow([str(ids[current_idx + idx_in_batch]), str(int(prediction[idx_in_batch].item()))])
@@ -103,10 +106,13 @@ def export_xgb_regressor(experiment_name):
             text_data = embedding.detach().cpu().numpy()  # (batch_size, emb_size)
             numeric_data = xgb_data[current_idx:current_idx + batch_size, :]  # (batch_size, emb_size)
             xgb_in = np.concatenate([numeric_data, text_data], axis=1)
-            prediction = np.exp(xg_reg.predict(xgb_in)) - 1
+            prediction = np.exp(xg_reg.predict(xgb_in)) - 1 if EXPORT_CONFIG['log'] else xg_reg.predict(xgb_in)
 
             if XGBOOST_CONFIG['remove_zero']:  # output 0 where the classifier thinks RT=0
                 prediction[is_zero < XGBOOST_CONFIG['remove_zero_threshold']] = 0
+
+            if EXPORT_CONFIG['threshold']:
+                prediction[prediction > EXPORT_CONFIG['threshold']] = EXPORT_CONFIG['threshold']
 
             for idx_in_batch in range(batch_size):
                 overall_idx = current_idx + idx_in_batch

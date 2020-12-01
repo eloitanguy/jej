@@ -7,23 +7,23 @@ DATASET_CONFIG = {
 }
 
 TRAIN_CONFIG = {
-    'batch_size': 512,
+    'batch_size': 256,
     'learning_rate': 1e-2,
-    'weight_decay': 1e-4,
+    'weight_decay': 1e-3,
     'workers': 6,
-    'experiment_name': 'AE_1',
-    'epochs': 5,
-    'checkpoint_every': 100,
+    'experiment_name': 'AE_6',
+    'epochs': 1,
+    'checkpoint_every': 200,
     'val_every': 200,
     'val_batches': 1000
 }
 
 RNN_CONFIG = {
     'hidden_size': 128,
-    'layers': 3,
+    'layers': 5,
     'emb_dim': 300,
     'numeric_data_size': 5,
-    'dropout': 0.1,
+    'dropout': 0.5,
     'linear_hidden_1': 15,
     'linear_hidden_2': 20,
     'classifier': False,
@@ -46,4 +46,9 @@ XGBOOST_CONFIG = {
     'log': True,
     'remove_zero': False,  # /!\ this affects only the exportation and not the dataset preparation
     'remove_zero_threshold': 0.5
+}
+
+EXPORT_CONFIG = {
+    'log': True,
+    'threshold': None
 }
