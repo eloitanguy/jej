@@ -83,7 +83,7 @@ class TweetDataset(Dataset):
 
         # normalising all values between -1 and 1
         offset = 1 if self.test else 0  # in the test file there is no retweet column -> offsetting the indices
-        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']])
+        numeric_data = torch.Tensor([int(line[COLUMN_NAME_TO_IDX['timestamp']])  # minute in the day
                                      / 1000 % (3600 * 24) / (3600 * 24 / 2) - 1,
                                      int(line[COLUMN_NAME_TO_IDX['user_verified'] - offset] == 'True') * 2 - 1,
                                      (int(line[COLUMN_NAME_TO_IDX['user_statuses_count'] - offset]) -
@@ -91,7 +91,10 @@ class TweetDataset(Dataset):
                                      (int(line[COLUMN_NAME_TO_IDX['user_followers_count'] - offset]) -
                                       MEANS['user_followers_count']) / STDS['user_followers_count'],
                                      (int(line[COLUMN_NAME_TO_IDX['user_friends_count'] - offset]) -
-                                      MEANS['user_friends_count']) / STDS['user_friends_count']
+                                      MEANS['user_friends_count']) / STDS['user_friends_count'],
+                                     (len(line[COLUMN_NAME_TO_IDX['user_mentions'] - offset].split(' '))),
+                                     (len(line[COLUMN_NAME_TO_IDX['urls'] - offset].split(' '))),
+                                     (len(line[COLUMN_NAME_TO_IDX['hashtags'] - offset].split(' '))),
                                      ])
 
         text_str = line[COLUMN_NAME_TO_IDX['text'] - offset]

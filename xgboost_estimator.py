@@ -9,6 +9,9 @@ import xgboost as xgb
 import argparse
 import os
 import json
+import time
+from datetime import timedelta
+import csv
 
 
 def prepare_datasets():
@@ -17,34 +20,52 @@ def prepare_datasets():
     embed.load_state_dict(checkpoint['model'])
     embed = embed.cuda()
 
-    dataset = TweetDataset(dataset_type='all')
-    N = len(dataset)
-    data = np.zeros((N, 5 + 20 + 1))  # 20 is rnn embedding, 1 for answer
-    loader = DataLoader(dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
-                        collate_fn=collate_function, shuffle=False)
-    current_idx = 0
-    n = len(loader)
-    print('')
-    for batch_index, batch in enumerate(loader):
-        printProgressBar(batch_index, n)
-        batch_size = batch['numeric'].shape[0]
+    annotated_dataset = TweetDataset(dataset_type='all')
+    test_dataset = TweetDataset(dataset_type='test')
 
-        numeric = batch['numeric'].cuda()
-        text = batch['embedding'].cuda()
-        _, embedding = embed(text, numeric)
+    def get_data(dataset):
+        N = len(dataset)
+        data = np.zeros((N, XGBOOST_CONFIG['numeric_data_size'] + XGBOOST_CONFIG['embedding_size'] + 1))  # 1 for answer
+        loader = DataLoader(dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
+                            collate_fn=collate_function, shuffle=False)
+        current_idx = 0
+        n = len(loader)
+        print('')
+        for batch_index, batch in enumerate(loader):
+            printProgressBar(batch_index, n)
+            batch_size = batch['numeric'].shape[0]
 
-        data[current_idx:current_idx+batch_size, 5:-1] = embedding.detach().cpu().numpy()
-        data[current_idx:current_idx+batch_size, :5] = numeric.detach().cpu().numpy()
-        data[current_idx:current_idx+batch_size, -1] = batch['target'].numpy()
+            numeric = batch['numeric'].cuda()
+            text = batch['embedding'].cuda()
 
-        current_idx += batch_size
+            embedding = embed(text, numeric)[1] if XGBOOST_CONFIG['embedding_use_hidden'] else embed.emb(text).mean(axis=1)
 
-    split = int(N * DATASET_CONFIG['train_percent'])
-    np.save(XGBOOST_CONFIG['train_file'], data[1:split])
-    np.save(XGBOOST_CONFIG['val_file'], data[split:])
+            data[current_idx:current_idx+batch_size, XGBOOST_CONFIG['numeric_data_size']:-1] = \
+                embedding.detach().cpu().numpy()
+            data[current_idx:current_idx+batch_size, :XGBOOST_CONFIG['numeric_data_size']] = \
+                numeric.detach().cpu().numpy()
+            data[current_idx:current_idx+batch_size, -1] = batch['target'].numpy()
+
+            current_idx += batch_size
+
+        return data
+
+    annotated_data = get_data(annotated_dataset)
+    split = int(len(annotated_dataset) * DATASET_CONFIG['train_percent'])
+    np.save(XGBOOST_CONFIG['train_file'], annotated_data[1:split])
+    np.save(XGBOOST_CONFIG['val_file'], annotated_data[split:])
+
+    test_data = get_data(test_dataset)
+    with open(DATASET_CONFIG['test_csv_relative_path'], newline='') as csvfile:
+        ids = [line[0] for line in list(csv.reader(csvfile))[1:]]
+
+    ids = np.array(ids).reshape(np.shape(ids)[0], 1)
+    prepared_test_data = np.concatenate((test_data, ids), axis=1)
+    np.save(XGBOOST_CONFIG['test_file'], prepared_test_data)
 
 
 def train():
+    print('Initialising {} ...'.format(XGBOOST_CONFIG['experiment_name']))
     train_set = np.load(XGBOOST_CONFIG['train_file'])
     X, Y = train_set[:, :-1], np.log(1+train_set[:, -1]) if XGBOOST_CONFIG['log'] else train_set[:, -1]
     xg_reg = xgb.XGBRegressor(objective='reg:squarederror',
@@ -55,7 +76,10 @@ def train():
                               reg_lambda=XGBOOST_CONFIG['reg_lambda'],
                               n_estimators=XGBOOST_CONFIG['n_estimators'],
                               verbosity=0)
+
+    t0 = time.time()
     xg_reg.fit(X, Y)
+    print('Training time: {}'.format(str(timedelta(seconds=time.time()-t0))))
 
     print('Computing train MAE ...')
     train_preds = xg_reg.predict(X)

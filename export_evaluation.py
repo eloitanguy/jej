@@ -54,11 +54,6 @@ def export_xgb_regressor(experiment_name):
     with open('checkpoints/{}/model_params.json'.format(experiment_name), 'r') as f:
         config = json.load(f)
 
-    checkpoint = torch.load(config['embedder'])
-    rnn = RNN(config=checkpoint['net_config']).eval()
-    rnn.load_state_dict(checkpoint['model'])
-    rnn = rnn.cuda()
-
     xg_reg = xgb.XGBRegressor(objective='reg:squarederror',
                               colsample_bytree=config['colsample_bytree'],
                               learning_rate=config['learning_rate'],
@@ -69,57 +64,16 @@ def export_xgb_regressor(experiment_name):
                               verbosity=0)
 
     xg_reg.load_model('checkpoints/{}/checkpoint.model'.format(experiment_name))
-    test_dataset = TweetDataset(dataset_type='test')
-    test_loader = DataLoader(test_dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
-                             collate_fn=collate_function, shuffle=False, pin_memory=True)
 
-    with open(DATASET_CONFIG['test_csv_relative_path'], newline='') as csvfile:
-        test_data = list(csv.reader(csvfile))[1:]
-
-    xgb_data = np.zeros((len(test_data), 5))  # 5 numeric entries
-    n = len(test_data)
-
-    for i, entry in enumerate(test_data):
-        printProgressBar(i, n, prefix='preparing xgb numeric data')
-        xgb_data[i, 0] = int(entry[COLUMN_NAME_TO_IDX['user_verified'] - 1] == 'True')
-        xgb_data[i, 1] = int(entry[COLUMN_NAME_TO_IDX['timestamp']]) / 1000 % (3600 * 24) / (3600 * 24 / 2) - 1
-        xgb_data[i, 2] = int(entry[COLUMN_NAME_TO_IDX['user_statuses_count'] - 1])
-        xgb_data[i, 3] = int(entry[COLUMN_NAME_TO_IDX['user_followers_count'] - 1])
-        xgb_data[i, 4] = int(entry[COLUMN_NAME_TO_IDX['user_friends_count'] - 1])
-    print('')
-
-    ids = [datum[0] for datum in test_data]
-    n = len(test_loader)
+    test_data = np.load(XGBOOST_CONFIG['test_file'])
+    X, ids = test_data[:, :-2], test_data[:, -1]
+    prediction = np.exp(xg_reg.predict(X)) - 1 if EXPORT_CONFIG['log'] else xg_reg.predict(X)
 
     with open("predictions.txt", 'w') as f:
         writer = csv.writer(f)
         writer.writerow(["TweetID", "NoRetweets"])
-        current_idx = 0
-        for batch_index, batch in enumerate(test_loader):
-            printProgressBar(batch_index, n, prefix='outputting result')
-            batch_size = batch['numeric'].shape[0]
-
-            numeric = batch['numeric'].cuda()
-            text = batch['embedding'].cuda()
-            is_zero, embedding = rnn(text, numeric)
-            is_zero = torch.sigmoid(is_zero).squeeze().detach().cpu().numpy()
-            text_data = embedding.detach().cpu().numpy()  # (batch_size, emb_size)
-            numeric_data = xgb_data[current_idx:current_idx + batch_size, :]  # (batch_size, emb_size)
-            xgb_in = np.concatenate([numeric_data, text_data], axis=1)
-            prediction = np.exp(xg_reg.predict(xgb_in)) - 1 if EXPORT_CONFIG['log'] else xg_reg.predict(xgb_in)
-
-            if XGBOOST_CONFIG['remove_zero']:  # output 0 where the classifier thinks RT=0
-                prediction[is_zero < XGBOOST_CONFIG['remove_zero_threshold']] = 0
-
-            if EXPORT_CONFIG['threshold']:
-                prediction[prediction > EXPORT_CONFIG['threshold']] = EXPORT_CONFIG['threshold']
-
-            for idx_in_batch in range(batch_size):
-                overall_idx = current_idx + idx_in_batch
-
-                writer.writerow([str(ids[overall_idx]), str(int(prediction[idx_in_batch]))])
-
-            current_idx += batch_size
+        for idx in range(prediction.shape[0]):
+            writer.writerow([str(ids[idx]), str(int(prediction[idx]))])
 
     print("Exportation done! :)")
 

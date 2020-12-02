@@ -31,7 +31,8 @@ class RNN(Module):
         self.GRU = nn.GRU(input_size=config['emb_dim'], hidden_size=config['hidden_size'],
                           num_layers=config['layers'], batch_first=True, bidirectional=True,
                           dropout=config['dropout'])
-        gru_out_size = 2*config['hidden_size']*config['layers']
+        gru_out_size = 2 * config['hidden_size'] * config['layers']
+
         # takes the activated gru output and the numeric data as input
         self.prelu1 = nn.PReLU(num_parameters=gru_out_size+config['numeric_data_size'])
         self.linear1 = nn.Linear(in_features=gru_out_size+config['numeric_data_size'],
