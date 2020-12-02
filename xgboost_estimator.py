@@ -65,7 +65,7 @@ def prepare_datasets():
 
 
 def train():
-    print('Initialising {} ...'.format(XGBOOST_CONFIG['experiment_name']))
+    print('Training {} ...'.format(XGBOOST_CONFIG['experiment_name']))
     train_set = np.load(XGBOOST_CONFIG['train_file'])
     X, Y = train_set[:, :-1], np.log(1+train_set[:, -1]) if XGBOOST_CONFIG['log'] else train_set[:, -1]
     xg_reg = xgb.XGBRegressor(objective='reg:squarederror',
@@ -75,6 +75,7 @@ def train():
                               alpha=XGBOOST_CONFIG['alpha'],
                               reg_lambda=XGBOOST_CONFIG['reg_lambda'],
                               n_estimators=XGBOOST_CONFIG['n_estimators'],
+                              subsample=XGBOOST_CONFIG['subsample'],
                               verbosity=0)
 
     t0 = time.time()

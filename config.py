@@ -41,12 +41,13 @@ XGBOOST_CONFIG = {
     'embedding_use_hidden': False,  # use an included embedding layer: 'False', use the last hidden layer: 'True'
     'embedding_size': 20,
     'colsample_bytree': 0.5,  # percentage of features used per tree.
-    'n_estimators': 200,  # number of trees
+    'n_estimators': 100,  # number of trees
     'max_depth': 10,  # max tree depth
     'learning_rate': 0.5,  # in ]0,1]
-    'alpha': 0,  # L1 regularisation
-    'reg_lambda': 200,  # L2 regularisation
-    'experiment_name': 'xgb_wae_6',
+    'alpha': 100,  # L1 regularisation
+    'reg_lambda': 100,  # L2 regularisation
+    'subsample': 1,  # use this proportion of the train set at every
+    'experiment_name': 'xgb_wae_28',
     'log': True,
     'numeric_data_size': 8
 }
