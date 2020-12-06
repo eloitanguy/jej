@@ -8,11 +8,11 @@ DATASET_CONFIG = {
 
 TRAIN_CONFIG = {
     'batch_size': 256,
-    'learning_rate': 1e-2,
-    'weight_decay': 1e-4,
+    'learning_rate': 1e-5,
+    'weight_decay': 0,
     'workers': 6,
-    'experiment_name': 'AE_9',
-    'epochs': 1,
+    'experiment_name': 'AE_CNN_2',
+    'epochs': 10,
     'checkpoint_every': 200,
     'val_every': 200,
     'val_batches': 1000
@@ -21,7 +21,7 @@ TRAIN_CONFIG = {
 RNN_CONFIG = {
     'hidden_size': 32,
     'layers': 5,
-    'emb_dim': 20,
+    'emb_dim': 300,
     'numeric_data_size': 8,
     'dropout': 0.1,
     'linear_hidden_1': 15,
@@ -37,17 +37,18 @@ XGBOOST_CONFIG = {
     'train_file': 'data/xgboost_dataset_train.npy',
     'val_file': 'data/xgboost_dataset_val.npy',
     'test_file': 'data/xgboost_dataset_test.npy',
-    'embedder': 'checkpoints/AE_9/epoch_0.pth',
+    'embedder': 'checkpoints/AE_2/epoch_4.pth',
     'embedding_use_hidden': False,  # use an included embedding layer: 'False', use the last hidden layer: 'True'
-    'embedding_size': 20,
+    'embedding_use_output': True,
+    'embedding_size': 1,
     'colsample_bytree': 0.5,  # percentage of features used per tree.
-    'n_estimators': 100,  # number of trees
-    'max_depth': 10,  # max tree depth
+    'n_estimators': 325,  # number of trees
+    'max_depth': 12,  # max tree depth
     'learning_rate': 0.5,  # in ]0,1]
-    'alpha': 100,  # L1 regularisation
-    'reg_lambda': 100,  # L2 regularisation
-    'subsample': 1,  # use this proportion of the train set at every
-    'experiment_name': 'xgb_wae_28',
+    'alpha': 0,  # L1 regularisation
+    'reg_lambda': 200,  # L2 regularisation
+    'subsample': 1,  # use this proportion of the train set at every step
+    'experiment_name': 'xgb_AE2ep4out_1',
     'log': True,
     'numeric_data_size': 8
 }
@@ -55,4 +56,8 @@ XGBOOST_CONFIG = {
 EXPORT_CONFIG = {
     'log': True,
     'threshold': None
+}
+
+CNN_CONFIG = {
+    'time_size': 128
 }

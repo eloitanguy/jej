@@ -2,9 +2,9 @@ import torch
 from dataset import TweetDataset, collate_function
 from tensorboardX import SummaryWriter
 from torch.optim import Adam
-from models import RNN, Classifier
+from models import RNN, CNN
 from config import TRAIN_CONFIG, DATASET_CONFIG
-from modules import printProgressBar, AverageMeter, MAE, MSE, precision_recall
+from modules import printProgressBar, AverageMeter, precision_recall
 from torch.utils.data import DataLoader
 import time
 import datetime
@@ -14,7 +14,7 @@ from torch.nn import BCEWithLogitsLoss, L1Loss, MSELoss
 cfg = TRAIN_CONFIG
 
 
-def infer_RNN(model, batch):
+def infer_NN(model, batch):
     loss_fun = L1Loss()
     # inference
     target = batch['target'].cuda().unsqueeze(1).float()
@@ -26,7 +26,7 @@ def infer_RNN(model, batch):
     return loss_fun(model_output, target)
 
 
-def infer_logRNN(model, batch):
+def infer_logNN(model, batch):
     loss_fun = MSELoss()
     # inference
     target = batch['target'].cuda().unsqueeze(1).float()
@@ -38,7 +38,7 @@ def infer_logRNN(model, batch):
     return loss_fun(model_output, torch.log(1 + target))  # Add 5 for centering on e^5
 
 
-def eval_logRNN(model, batch):
+def eval_logNN(model, batch):
     loss_fun = L1Loss()
     # inference
     target = batch['target'].cuda().squeeze().float()
@@ -81,7 +81,6 @@ def val(model, val_loader, writer, step, infer):
             if batch_idx >= cfg['val_batches']:
                 break
 
-            # loss = infer_RNN(model, batch, MAE)
             batch_val_loss = infer(model, batch).item()
 
             # log
@@ -196,5 +195,5 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
 
 
 if __name__ == '__main__':
-    net = RNN().train().cuda()
-    train(net, infer_logRNN, eval_logRNN)
+    net = CNN().train().cuda()
+    train(net, infer_logNN, eval_logNN)

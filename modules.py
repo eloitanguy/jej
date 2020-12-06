@@ -1,24 +1,3 @@
-import torch
-
-
-def MAE(target, output):
-    """
-    :param target: tensor [batch_size] of the retweets
-    :param output: tensor [batch_size] of the estimations
-    :return: the Mean Absolute Error of the model output on this batch
-    """
-    return torch.abs(target - output).mean()
-
-
-def MSE(target, output):
-    """
-    :param target: tensor [batch_size] of the retweets
-    :param output: tensor [batch_size] of the estimations
-    :return: the Mean Absolute Error of the model output on this batch
-    """
-    return torch.abs((target - output) ** 2).mean()
-
-
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=2, length=80, fill='█', printEnd="\r"):
     """
     Call in a loop to create terminal progress bar

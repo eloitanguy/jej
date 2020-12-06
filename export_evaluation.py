@@ -1,4 +1,4 @@
-from models import RNN
+from models import RNN, CNN
 import torch
 import csv
 from dataset import TweetDataset, collate_function, COLUMN_NAME_TO_IDX
@@ -13,7 +13,7 @@ import argparse
 
 def export_RNN_regressor(checkpoint_path):
     checkpoint = torch.load(checkpoint_path)
-    model = RNN(checkpoint['net_config'])
+    model = CNN(checkpoint['net_config'])  # TODO: restore RNN
     model.load_state_dict(checkpoint['model'])
     model = model.eval().cuda()
 

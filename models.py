@@ -1,21 +1,9 @@
 from torch.nn import Module, Embedding
 from torch import nn
 import torch
-from config import RNN_CONFIG
+from config import RNN_CONFIG, CNN_CONFIG
 from torch import relu
-
-
-class NumericModel(Module):
-    """
-    A simple linear regression taking the numeric data and outputting an estimated retweet count \n
-    in_dim represents the size of the input vector: [batch_size, in_dim]
-    """
-    def __init__(self, in_dim):
-        super(NumericModel, self).__init__()
-        self.lin1 = nn.Linear(in_features=in_dim, out_features=1)
-
-    def forward(self, x):
-        return self.lin1(x)
+import torch.nn.functional as F
 
 
 class RNN(Module):
@@ -72,13 +60,77 @@ class RNN(Module):
             return relu(out)
 
 
-class Classifier(Module):
-    """
-    A logistic regression that tries to classify whether a tweet is viral or not
-    """
-    def __init__(self, in_dim=5):
-        super(Classifier, self).__init__()
-        self.lin1 = nn.Linear(in_features=in_dim, out_features=1)
+class CNN(nn.Module):
+    def __init__(self, config=None):
+        super(CNN, self).__init__()
+        if not config:
+            config = CNN_CONFIG
+        self.config = config
 
-    def forward(self, x):
-        return torch.sigmoid(self.lin1(x))
+        self.embed = nn.Embedding(num_embeddings=10000 + 1, embedding_dim=300)
+
+        self.conv1 = nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, stride=2)
+        self.pool1 = nn.AvgPool1d(kernel_size=3, stride=2)
+
+        self.conv2 = nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, stride=2)
+        self.pool2 = nn.AvgPool1d(kernel_size=3, stride=2)
+
+        self.conv3 = nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, stride=2)
+        self.pool3 = nn.AvgPool1d(kernel_size=3, stride=2)
+
+        self.lin1 = nn.Linear(in_features=3*128, out_features=128)
+        self.lin2 = nn.Linear(in_features=128, out_features=32)
+        self.lin3 = nn.Linear(in_features=32+8, out_features=32)  # +8 for numeric
+        self.lin4 = nn.Linear(in_features=32, out_features=32)
+        self.lin5 = nn.Linear(in_features=32, out_features=16)
+        self.lin6 = nn.Linear(in_features=16, out_features=1)
+
+    def forward(self, text, numeric):
+        batch_size, time = text.shape
+        if time > 128:
+            text = text[:, :128]
+        else:
+            text = torch.cat((text, torch.zeros(batch_size, 128-time, device='cuda')), dim=1)
+
+        out = self.embed(text.long())
+        out = self.conv1(out)
+        out = self.pool1(out)
+        out = F.relu(out)
+
+        out = self.conv2(out)
+        out = self.pool2(out)
+        out = F.relu(out)
+
+        out = self.conv3(out)
+        out = self.pool3(out)
+        out = F.relu(out)
+
+        batch, out_time, hidden = out.shape
+        out = out.reshape(batch, out_time*hidden)
+        out = F.relu(self.lin1(out))
+        out = F.relu(self.lin2(out))
+        out = torch.cat((out, numeric), dim=1)  # adding numeric data
+        out = F.relu(self.lin3(out))
+        out = F.relu(self.lin4(out))
+        out = F.relu(self.lin5(out))
+        out = F.relu(self.lin6(out))
+
+        return out
+
+
+if __name__ == '__main__':
+    from dataset import TweetDataset, collate_function
+    from config import TRAIN_CONFIG
+    from torch.utils.data import DataLoader
+    cnn = CNN()
+    train_dataset = TweetDataset(dataset_type='train')
+    train_loader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
+                              collate_fn=collate_function, shuffle=True, pin_memory=True)
+    txt, num = torch.zeros(1, 150, 300), torch.zeros(1, 8)
+
+    for batch in train_loader:
+        target = batch['target'].cuda().squeeze().float()
+        numeric = batch['numeric'].cuda()
+        model_input = batch['embedding'].cuda()
+        model_output = cnn(model_input, numeric).squeeze()
+        break

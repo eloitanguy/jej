@@ -38,7 +38,12 @@ def prepare_datasets():
             numeric = batch['numeric'].cuda()
             text = batch['embedding'].cuda()
 
-            embedding = embed(text, numeric)[1] if XGBOOST_CONFIG['embedding_use_hidden'] else embed.emb(text).mean(axis=1)
+            if XGBOOST_CONFIG['embedding_use_hidden']:
+                embedding = embed(text, numeric[:, :checkpoint['net_config']['numeric_data_size']])[1]
+            elif XGBOOST_CONFIG['embedding_use_output']:
+                embedding = torch.exp(embed(text, numeric[:, :checkpoint['net_config']['numeric_data_size']])[0]) - 1
+            else:  # expecting a built-in embedding layer -> taking the mean of the embeddings
+                embedding = embed.emb(text).mean(axis=1)
 
             data[current_idx:current_idx+batch_size, XGBOOST_CONFIG['numeric_data_size']:-1] = \
                 embedding.detach().cpu().numpy()

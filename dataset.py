@@ -102,7 +102,7 @@ class TweetDataset(Dataset):
 
         if not RNN_CONFIG['use_AE']:  # the text data is a GloVe embedding of shape (text_size, emb_dim)
             text_embedding = GLOVE.get_vecs_by_tokens(text_word_list, lower_case_backup=True)
-        else:  # the text data is an array of word indices fed to the auto-encoder, shape (text_size, emb_dim)
+        else:  # the text data is an array of word indices fed to the auto-encoder, shape (text_size)
             text_embedding = torch.tensor([get_word_index(self.ps.stem(w), self.vocab) for w in text_word_list])
 
         return {'numeric': numeric_data, 'text_emb': text_embedding,
