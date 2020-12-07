@@ -8,18 +8,18 @@ DATASET_CONFIG = {
 
 TRAIN_CONFIG = {
     'batch_size': 256,
-    'learning_rate': 1e-5,
-    'weight_decay': 0,
+    'learning_rate': 1e-2,
+    'weight_decay': 1e-4,
     'workers': 6,
-    'experiment_name': 'AE_CNN_2',
-    'epochs': 10,
+    'experiment_name': 'NAE_1',
+    'epochs': 5,
     'checkpoint_every': 200,
     'val_every': 200,
     'val_batches': 1000
 }
 
 RNN_CONFIG = {
-    'hidden_size': 32,
+    'hidden_size': 128,
     'layers': 5,
     'emb_dim': 300,
     'numeric_data_size': 8,
@@ -29,8 +29,7 @@ RNN_CONFIG = {
     'classifier': False,
     'use_AE': True,
     'vocab_using_n_tweets': 50000,
-    'AE_vocab_size': 10000,  # excludes the 'unknown token' which is at 0
-    'keep_all_hidden_activations': False  # whether h entirely of only the last hidden activation before linear blocks
+    'AE_vocab_size': 10000  # excludes the 'unknown token' which is at 0
 }
 
 XGBOOST_CONFIG = {

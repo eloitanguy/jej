@@ -116,21 +116,3 @@ class CNN(nn.Module):
         out = F.relu(self.lin6(out))
 
         return out
-
-
-if __name__ == '__main__':
-    from dataset import TweetDataset, collate_function
-    from config import TRAIN_CONFIG
-    from torch.utils.data import DataLoader
-    cnn = CNN()
-    train_dataset = TweetDataset(dataset_type='train')
-    train_loader = DataLoader(train_dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
-                              collate_fn=collate_function, shuffle=True, pin_memory=True)
-    txt, num = torch.zeros(1, 150, 300), torch.zeros(1, 8)
-
-    for batch in train_loader:
-        target = batch['target'].cuda().squeeze().float()
-        numeric = batch['numeric'].cuda()
-        model_input = batch['embedding'].cuda()
-        model_output = cnn(model_input, numeric).squeeze()
-        break

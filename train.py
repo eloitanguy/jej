@@ -4,7 +4,7 @@ from tensorboardX import SummaryWriter
 from torch.optim import Adam
 from models import RNN, CNN
 from config import TRAIN_CONFIG, DATASET_CONFIG
-from modules import printProgressBar, AverageMeter, precision_recall
+from modules import printProgressBar, AverageMeter
 from torch.utils.data import DataLoader
 import time
 import datetime
@@ -92,10 +92,12 @@ def val(model, val_loader, writer, step, infer):
     writer.add_scalar('Steps/val_loss', val_loss, step)
     print('\n')
     print('Finished validation with loss {:4f}'.format(val_loss))
+    return val_loss
 
 
 def train(model, infer_train, infer_val, load_checkpoint=None):
     """ Train the RNN model using the parameters defined in the config file """
+    global checkpoint_name
     print('Initialising {}'.format(cfg['experiment_name']))
     checkpoint_folder = 'checkpoints/{}/'.format(cfg['experiment_name'])
 
@@ -133,6 +135,7 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
 
     init_loss = 0.
     avg_loss = AverageMeter()
+    best_mae = 1e10
 
     print('Sanity val')
     val(model, val_loader, writer, 0, infer_val)
@@ -160,7 +163,7 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
             suffix = '\tloss {:.4f}/{:.4f}\tETA [{}/{}]'.format(avg_loss.avg, init_loss,
                                                                 datetime.timedelta(seconds=int(elapsed)), est)
             printProgressBar(batch_idx, loader_length, suffix=suffix,
-                             prefix='Epoch [{}/{}]\tStep [{}/{}]'.format(epoch, epochs-1, batch_idx, loader_length))
+                             prefix='Epoch [{}/{}]\tStep [{}/{}]'.format(epoch, epochs - 1, batch_idx, loader_length))
 
             writer.add_scalar('Steps/train_loss', loss, step)
 
@@ -176,7 +179,14 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
 
             # validating
             if step % cfg['val_every'] == 0:
-                val(model, val_loader, writer, step, infer_val)
+                mae = val(model, val_loader, writer, step, infer_val)
+                if mae < best_mae:
+                    best_mae = mae
+                    print('Best model with V{:.2f}'.format(best_mae))
+                    torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': batch_idx, 'step': step,
+                                'optimiser': optimiser.state_dict(), 'train_config': cfg, 'net_config': model.config,
+                                'dataset_config': DATASET_CONFIG},
+                               '{}/best_with_V{:.2f}.pth'.format(checkpoint_folder, best_mae))
                 model.train()
 
         # end of epoch
@@ -195,5 +205,5 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
 
 
 if __name__ == '__main__':
-    net = CNN().train().cuda()
+    net = RNN().train().cuda()
     train(net, infer_logNN, eval_logNN)
