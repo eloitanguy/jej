@@ -31,7 +31,7 @@ def prepare_datasets():
     annotated_dataset = TweetDataset(dataset_type='all')
     test_dataset = TweetDataset(dataset_type='test')
 
-    def get_data(dataset):
+    def get_data(dataset, message):
         N = len(dataset)
         data = np.zeros((N, XGBOOST_CONFIG['numeric_data_size'] + XGBOOST_CONFIG['embedding_size'] + 1))  # 1 for answer
         loader = DataLoader(dataset, batch_size=TRAIN_CONFIG['batch_size'], num_workers=TRAIN_CONFIG['workers'],
@@ -40,7 +40,7 @@ def prepare_datasets():
         n = len(loader)
         print('')
         for batch_index, batch in enumerate(loader):
-            printProgressBar(batch_index, n)
+            printProgressBar(batch_index, n, prefix=message)
             batch_size = batch['numeric'].shape[0]
 
             numeric = batch['numeric'].cuda()
@@ -63,12 +63,12 @@ def prepare_datasets():
 
         return data
 
-    annotated_data = get_data(annotated_dataset)
+    annotated_data = get_data(annotated_dataset, "Preparing train.csv ...")
     split = int(len(annotated_dataset) * DATASET_CONFIG['train_percent'])
     np.save(XGBOOST_CONFIG['train_file'], annotated_data[1:split])
     np.save(XGBOOST_CONFIG['val_file'], annotated_data[split:])
 
-    test_data = get_data(test_dataset)
+    test_data = get_data(test_dataset, "Preparing evaluation.csv ...")
     with open(DATASET_CONFIG['test_csv_relative_path'], newline='') as csvfile:
         ids = [line[0] for line in list(csv.reader(csvfile))[1:]]
 

@@ -77,6 +77,20 @@ The models will be saved in checkpoints/[experiment_name]/ and you can follow th
 
 The best model in terms of validation loss will be kept in the dedicated checkpoint folder as well.
 
+Our setup (for comparison):
+
+* i7-8750H (6 cores, @4.1GHz)
+* RTX 2080-MQ (8GB VRAM, used all of it here)
+* 16GB RAM (used under 8GB here)
+
+The complete reproduction takes 18 minutes on this machine, but may take significantly longer with less VRAM or less RAM.
+
+The scores for this reproduction are expected to be:
+
+* AE best validation MAE: 144.87 (against 144.14 for our original non-deterministic training).
+* XGB validation MAE: 139.56 (against 139.4)
+* Kaggle score: 149.60 (against 149.42)
+
 ## Training XGBoost models
 
 In the same manner as for PyTorch models, make sure to edit the config file to your liking before executing anything.
@@ -101,8 +115,3 @@ If you want to prepare a prediction file from a PyTorch model, run:
 For outputting the predictions of an XGBoost model, use the name of its experiment (XGBOOST_CONFIG['experiment_name']):
 
     python export_evaluation.py --xgb-name [your_experiment_name]
-
-
-
-
-
