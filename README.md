@@ -44,7 +44,6 @@ Before executing the scripts, please go through the following steps:
 
 * Place the `evaluation.csv` and `train.csv` files from Kaggle (https://www.kaggle.com/c/covid19-retweet-prediction-challenge-2020/data?select=data) in data/
 * If necessary, install the required modules using `pip install -r requirements.txt`
-* Run the command `python dataset.py` in order to prepare the vocabulary file.
 
 ## Reproducing results
 
@@ -63,7 +62,8 @@ Finally, it will export the predictions in `checkpoints/XGB_reproduction/predict
 
 ## Training PyTorch models
 
-Before starting training, configure your network by modifying RNN_CONFIG in `config.py` and adjust your training parameters by changing TRAIN_CONFIG
+Before starting training, configure your network by modifying RNN_CONFIG in `config.py` and adjust your training parameters by changing TRAIN_CONFIG.
+Remark: if you change the Auto-Encoder vocabulary settings, you must run the command `python dataset.py` in order to prepare the vocabulary file.
 
 When you are satisfied, make sure that you are using the right inference functions at the bottom of `train.py`, then you can simply run:
 

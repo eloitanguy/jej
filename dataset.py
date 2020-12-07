@@ -28,7 +28,8 @@ STDS = {'user_statuses_count': 98392.1584,
         'user_followers_count': 2438640.574379095,
         'user_friends_count': 17252.172964586}
 
-GLOVE = torchtext.vocab.GloVe(dim=300)  # embedding dimension is emb_dim = 300 here
+if not RNN_CONFIG['use_AE']:
+    GLOVE = torchtext.vocab.GloVe(dim=300)  # embedding dimension is emb_dim = 300 here
 
 cfg = DATASET_CONFIG
 DATASET_SIZE = 665777
