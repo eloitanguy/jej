@@ -21,6 +21,9 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=2, length=
 
 
 class AverageMeter(object):
+    """
+    A handy class for averages
+    """
     def __init__(self):
         self.number = 0.
         self.sum = 0.
@@ -41,7 +44,7 @@ def precision_recall(dt, gt, t=0.5, is_binary=True):
     :param gt: 1D tensor of ground truth values in {0,1}
     :param t: if dt isn't binary, threshold for outputting 1
     :param is_binary: indicates whether dt is in {0,1} or [0,1]
-    :return: precision, recall
+    :return: precision, recall at confidence threshold t
     """
     if not is_binary:
         dt[dt < t] = 0

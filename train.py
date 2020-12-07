@@ -2,7 +2,7 @@ import torch
 from dataset import TweetDataset, collate_function
 from tensorboardX import SummaryWriter
 from torch.optim import Adam
-from models import RNN, CNN
+from models import RNN
 from config import TRAIN_CONFIG, DATASET_CONFIG
 from modules import printProgressBar, AverageMeter
 from torch.utils.data import DataLoader
@@ -10,11 +10,18 @@ import time
 import datetime
 import os
 from torch.nn import BCEWithLogitsLoss, L1Loss, MSELoss
+import argparse
 
 cfg = TRAIN_CONFIG
 
 
 def infer_NN(model, batch):
+    """
+    :param model: a PyTorch NN
+    :param batch: a batch tensor
+    :return: the L1 loss (MAE) of the model on this batch
+    """
+
     loss_fun = L1Loss()
     # inference
     target = batch['target'].cuda().unsqueeze(1).float()
@@ -27,6 +34,12 @@ def infer_NN(model, batch):
 
 
 def infer_logNN(model, batch):
+    """
+    :param model: a PyTorch NN
+    :param batch: a batch tensor
+    :return: the L2 loss (MSE) of the log of the output of the model on this batch
+    """
+
     loss_fun = MSELoss()
     # inference
     target = batch['target'].cuda().unsqueeze(1).float()
@@ -39,6 +52,12 @@ def infer_logNN(model, batch):
 
 
 def eval_logNN(model, batch):
+    """
+    :param model: a PyTorch NN
+    :param batch: a batch tensor
+    :return: the L1 loss (MAE) of the logarithmic model's prediction on this batch
+    """
+
     loss_fun = L1Loss()
     # inference
     target = batch['target'].cuda().squeeze().float()
@@ -51,6 +70,12 @@ def eval_logNN(model, batch):
 
 
 def infer_Classifier(model, batch):
+    """
+    :param model: a PyTorch classifier NN
+    :param batch: a batch tensor
+    :return: the binary cross-entropy loss of the classifier on this batch
+    """
+
     loss_fun = BCEWithLogitsLoss()
     t = 1
     target = batch['target'].unsqueeze(1)
@@ -67,8 +92,15 @@ def infer_Classifier(model, batch):
 def val(model, val_loader, writer, step, infer):
     """
     Computes the loss on the validation set and logs it to tensorboard \n
-    The loss is computed on a fixed subset with the first [val_batches] batches, defined in config file
+    The loss is computed on a fixed subset with the first [val_batches] batches, defined in the config file \n
+    :param model: a PyTorch NN to evaluate
+    :param val_loader: a PyTorch Dataloader
+    :param writer: a tensorboard writer object
+    :param step: the current training step
+    :param infer: inference function (see above)
+    :return:
     """
+
     print('\n')
     model.eval()
     val_losses = []
@@ -96,7 +128,15 @@ def val(model, val_loader, writer, step, infer):
 
 
 def train(model, infer_train, infer_val, load_checkpoint=None):
-    """ Train the RNN model using the parameters defined in the config file """
+    """
+    Train the RNN model using the parameters defined in the config file \n
+    :param model: a pytorch NN
+    :param infer_train: the inference function used for training (see above)
+    :param infer_val: the inference function used for validating (see above)
+    :param load_checkpoint: if None, does nothing, otherwise starts training from the given path to a .pth checkpoint
+    :return:
+    """
+
     global checkpoint_name
     print('Initialising {}'.format(cfg['experiment_name']))
     checkpoint_folder = 'checkpoints/{}/'.format(cfg['experiment_name'])
@@ -186,7 +226,7 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
                     torch.save({'model': model.state_dict(), 'epoch': epoch, 'batch_idx': batch_idx, 'step': step,
                                 'optimiser': optimiser.state_dict(), 'train_config': cfg, 'net_config': model.config,
                                 'dataset_config': DATASET_CONFIG},
-                               '{}/best_with_V{:.2f}.pth'.format(checkpoint_folder, best_mae))
+                               '{}/best.pth'.format(checkpoint_folder))
                 model.train()
 
         # end of epoch
@@ -205,5 +245,15 @@ def train(model, infer_train, infer_val, load_checkpoint=None):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Retweet Estimator training')
+    parser.add_argument('--deterministic', action='store_true',
+                        help='Tries to make the training as deterministic as possible')
+    args = parser.parse_args()
+
+    if args.deterministic:
+        print('Pseudo-deterministic training')
+        torch.set_deterministic(True)
+        torch.manual_seed(42)
+
     net = RNN().train().cuda()
     train(net, infer_logNN, eval_logNN)

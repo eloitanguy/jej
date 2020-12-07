@@ -1,5 +1,5 @@
 import numpy as np
-from dataset import TweetDataset, collate_function, DATASET_SPLIT
+from dataset import TweetDataset, collate_function
 from modules import printProgressBar
 from torch.utils.data import DataLoader
 import torch
@@ -15,6 +15,14 @@ import csv
 
 
 def prepare_datasets():
+    """
+    Prepares the training, validation and test (Kaggle) datasets used by the XGBoost model \n
+    This function looks into the XGBOOST_CONFIG dictionary in config.py for the following information: \n
+    * which embedding NN to use (looks for the .pth checkpoint in XGBOOST_CONFIG['embedder'])
+    * how to extract the embedding: XGBOOST_CONFIG['embedding_use_hidden', 'embedding_use_output', 'embedding_size']
+    * how many numeric variables to add as input
+    * where to dump the prepared .npy files: XGBOOST_CONFIG['train_file', 'val_file', 'test_file']
+    """
     checkpoint = torch.load(XGBOOST_CONFIG['embedder'])
     embed = RNN(config=checkpoint['net_config']).eval()
     embed.load_state_dict(checkpoint['model'])
@@ -70,6 +78,11 @@ def prepare_datasets():
 
 
 def train():
+    """
+    Runs the training of the XGBoost regressor, using the configuration in XGBOOST_CONFIG. \n
+    The model is saved in checkpoints/XGBOOST_CONFIG['experiment_name']/ as a .model file with its config (.json).
+    """
+
     print('Training {} ...'.format(XGBOOST_CONFIG['experiment_name']))
     train_set = np.load(XGBOOST_CONFIG['train_file'])
     X, Y = train_set[:, :-1], np.log(1+train_set[:, -1]) if XGBOOST_CONFIG['log'] else train_set[:, -1]

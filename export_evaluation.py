@@ -1,7 +1,7 @@
-from models import RNN, CNN
+from models import RNN
 import torch
 import csv
-from dataset import TweetDataset, collate_function, COLUMN_NAME_TO_IDX
+from dataset import TweetDataset, collate_function
 from modules import printProgressBar
 from torch.utils.data import DataLoader
 from config import TRAIN_CONFIG, DATASET_CONFIG, XGBOOST_CONFIG, EXPORT_CONFIG
@@ -12,8 +12,12 @@ import argparse
 
 
 def export_RNN_regressor(checkpoint_path):
+    """
+    :param checkpoint_path: relative path to a PyTorch .pth checkpoint
+    :return: None, dumps a prediction text file in the model's training folder
+    """
     checkpoint = torch.load(checkpoint_path)
-    model = CNN(checkpoint['net_config'])  # TODO: restore RNN
+    model = RNN(checkpoint['net_config'])
     model.load_state_dict(checkpoint['model'])
     model = model.eval().cuda()
 
@@ -27,7 +31,7 @@ def export_RNN_regressor(checkpoint_path):
     ids = [datum[0] for datum in test_data]
     n = len(test_loader)
 
-    with open("predictions.txt", 'w') as f:
+    with open("checkpoints/{}/predictions.txt".format(checkpoint['train_config']['experiment_name']), 'w') as f:
         writer = csv.writer(f)
         writer.writerow(["TweetID", "NoRetweets"])
         current_idx = 0
@@ -51,6 +55,10 @@ def export_RNN_regressor(checkpoint_path):
 
 
 def export_xgb_regressor(experiment_name):
+    """
+    :param experiment_name: name of a finished XGBoost training (XGBOOST_CONFIG['experiment_name'])
+    :return: None, dumps a prediction text file in the model's training folder
+    """
     with open('checkpoints/{}/model_params.json'.format(experiment_name), 'r') as f:
         config = json.load(f)
 
@@ -69,7 +77,7 @@ def export_xgb_regressor(experiment_name):
     X, ids = test_data[:, :-2], test_data[:, -1]
     prediction = np.exp(xg_reg.predict(X)) - 1 if EXPORT_CONFIG['log'] else xg_reg.predict(X)
 
-    with open("predictions.txt", 'w') as f:
+    with open("checkpoints/{}/predictions.txt".format(experiment_name), 'w') as f:
         writer = csv.writer(f)
         writer.writerow(["TweetID", "NoRetweets"])
         for idx in range(prediction.shape[0]):
@@ -78,17 +86,43 @@ def export_xgb_regressor(experiment_name):
     print("Exportation done! :)")
 
 
+def export_average(prediction_list):
+    """
+    :param prediction_list: list of paths to valid .txt prediction files
+    :return: None: dumps a predictions.txt prediction file in the main repository
+    """
+    data = []
+
+    for file in prediction_list:
+        with open(file, newline='') as csvfile:
+            data.append(list(csv.reader(csvfile))[1:])
+
+    with open("predictions.txt", 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(["TweetID", "NoRetweets"])
+        for data_entry_idx in range(len(data[0])):
+            avg = 0
+            for prediction_idx in range(len(prediction_list)):
+                prediction = data[prediction_idx][data_entry_idx][1]
+                avg += int(prediction) / len(prediction_list)
+            entry_id = data[0][data_entry_idx][0]
+            writer.writerow([entry_id, avg])
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Retweet estimator exportation for kaggle submission')
     parser.add_argument('--checkpoint', type=str, default='',
                         help='Path to a torch checkpoint')
     parser.add_argument('--xgb-name', type=str, default='',
                         help='Path to a the name of an XGBoost experiment')
+    parser.add_argument("--average", nargs="+", default=[])
     args = parser.parse_args()
 
     if args.checkpoint != '':
         export_RNN_regressor(args.checkpoint)
     elif args.xgb_name != '':
         export_xgb_regressor(args.xgb_name)
+    elif args.average:
+        export_average(args.average)
     else:
         print('The provided inputs {} and {} are invalid'.format(args.checkpoint, args.xgb_name))

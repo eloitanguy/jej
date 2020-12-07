@@ -1,12 +1,17 @@
 from torch.nn import Module, Embedding
 from torch import nn
 import torch
-from config import RNN_CONFIG, CNN_CONFIG
+from config import RNN_CONFIG
 from torch import relu
 import torch.nn.functional as F
 
 
 class RNN(Module):
+    """
+    A recurrent neural network (LSTM base) that also uses the numeric information in order to estimate the RTs. \n
+    If a config dictionary is given at initialisation, the model will be built using that configuration. \n
+    If no config is given, the Module will be built using RNN_CONFIG in the config.py file.
+    """
     def __init__(self, config=None):
         super(RNN, self).__init__()
         if not config:
@@ -61,11 +66,12 @@ class RNN(Module):
 
 
 class CNN(nn.Module):
-    def __init__(self, config=None):
+    """
+    An ineffective convolutional NN that would estimate the RTs based on tweets of fixed sizes \n
+    (either padded or truncated entries, done in the forward step)
+    """
+    def __init__(self):
         super(CNN, self).__init__()
-        if not config:
-            config = CNN_CONFIG
-        self.config = config
 
         self.embed = nn.Embedding(num_embeddings=10000 + 1, embedding_dim=300)
 

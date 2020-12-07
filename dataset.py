@@ -44,9 +44,14 @@ class TweetDataset(Dataset):
     """
     Defines a torch "Dataset" object for loading the training and validation data. \n
     dataset_type indicates what to build: \n
-    * 'train' ->the training set (examples in [0, DATASET_SPLIT[) \n
+    * 'train' ->the training set (examples in [0, DATASET_SPLIT[)
     * 'val' or 'validation' -> the validation set (examples in [DATASET_SPLIT, ...[
-    * 'remove_zero': removes the tweets with 0 RTs
+    * 'test' -> the Kaggle test set (with no RT entry)
+    * 'all' -> the entire train.csv file
+    This constructor relies on the DATASET_CONFIG dictionary in config.py. \n
+    This also relies on RNN_CONFIG['use_AE']: \n
+    * if True, we want to train an AutoEncoder and therefore the input should be indices
+    * If False, we want to use pretrained word embeddings: in this cas we use GloVe vectors.
     """
 
     def __init__(self, dataset_type='train'):
@@ -79,7 +84,7 @@ class TweetDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        line = self.data[idx]  # the first line is the column names
+        line = self.data[idx]
 
         # normalising all values between -1 and 1
         offset = 1 if self.test else 0  # in the test file there is no retweet column -> offsetting the indices
@@ -111,6 +116,11 @@ class TweetDataset(Dataset):
 
 
 def collate_function(data):
+    """
+    Defines the batch aggregation routine for the DataLoader \n
+    :param data: a list of elements from the Dataset object
+    :return: a prepared batch made from these entries
+    """
     batch_size = len(data)
     numeric = torch.stack([data[idx]['numeric'] for idx in range(batch_size)])
     target = torch.stack([torch.tensor(data[idx]['target']) for idx in range(batch_size)])
@@ -124,6 +134,12 @@ def collate_function(data):
 
 
 def create_vocabulary():
+    """
+    Using RNN_CONFIG['vocab_using_n_tweets'] tweets from the train.csv dataset, \n
+    creates a vocabulary with RNN_CONFIG['AE_vocab_size']] words.\n
+    The vocabulary is an ordered dictionary: the keys are the word radicals and the keys each word's index.\n
+    :return: None, dumps the vocabulary as a .json file at data/vocab.json
+    """
     with open(cfg['csv_relative_path'], newline='') as csvfile:
         data = list(csv.reader(csvfile))[1:]
 
@@ -154,7 +170,7 @@ def get_word_index(word, vocabulary):
     """
     :param word: a string
     :param vocabulary: a dictionary (key: word, item: index)
-    :return: the index of the word in the vocabulary
+    :return: the index of the word in the vocabulary if
     """
 
     if word in vocabulary:
@@ -164,4 +180,5 @@ def get_word_index(word, vocabulary):
 
 
 if __name__ == '__main__':
+    print('Creating vocabulary and exporting it as data/vocab.json ...')
     create_vocabulary()
