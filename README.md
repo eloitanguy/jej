@@ -1,4 +1,4 @@
-# JEJ (Joy Dandy, Eloi Tanguy, Joséphine Gilbert)
+# JEJ
 
 Machine Learning project for retweet estimation: Ecole polytechnique INF554 Data Challenge 2020
 
