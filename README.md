@@ -2,7 +2,6 @@
 
 Machine Learning project for retweet estimation: Ecole polytechnique INF554 Data Challenge 2020
 
-- [JEJ](#jej--joy-dandy--eloi-tanguy--jos-phine-gilbert-)
   * [Presentation](#presentation)
   * [Repository overview](#repository-overview)
   * [Getting started](#getting-started)
