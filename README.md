@@ -19,7 +19,7 @@ The data is available at https://www.kaggle.com/c/covid19-retweet-prediction-cha
 The repository is the outcome of many approaches to this problem, the final proposition being composed of two models:
 
 * An auto-encoding recurrent neural network that uses the text data and numeric data in order to estimate the natural logarithm of the retweets
-* A boosted random forest model (XGBoost) that uses the RNN's prediction and the same numeric data in order to estimate the log-RT.
+* A boosted random forest model ([XGBoost](https://arxiv.org/pdf/1603.02754.pdf)) that uses the RNN's prediction and the same numeric data in order to estimate the log-RT.
 
 ## Repository overview
 
@@ -50,14 +50,18 @@ The configuration file has been prepared with the configuration of our best mode
 
 After the [Getting started](#getting-started) section, the commands to execute are:
 
+* Training the Auto-Encoder model, this will save the Auto-Encoder RNN model in `checkpoints/AE_reproduction/best.pth`.
+
     python train.py --deterministic
+    
+* Preparing the input data for training and testing the XGBoost model (three files for train, val and test saved in `data/`), then training the model (saving it in `checkpoints/XGB_reproduction/checkpoint.model`):
+
     python xgboost_estimator.py --prepare
     python xgboost_estimator.py --train
+
+* Exporting the XGB model's estimation for the Kaggle test set in `checkpoints/XGB_reproduction/predictions.txt`:
+
     python export_evaluation.py --xgb-name XGB_reproduction
-
-This will save the Auto-Encoder RNN model in `checkpoints/AE_reproduction/best.pth` and the XGBoost model in `checkpoints/XGB_reproduction/checkpoint.model`
-
-Finally, it will export the predictions in `checkpoints/XGB_reproduction/predictions.txt`
 
 The complete reproduction takes 18 minutes on this machine, but may take significantly longer with less VRAM or less RAM (see the section below for comparing your setup to ours). In total the folder will take 870MB with the checkpoints saved.
 
