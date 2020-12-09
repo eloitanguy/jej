@@ -19,11 +19,11 @@ TRAIN_CONFIG = {
 }
 
 RNN_CONFIG = {
-    'hidden_size': 128,  # The hidden size of the LSTM model
-    'layers': 5,  # The layers of the LSTM model
+    'hidden_size': 128,  # The hidden size of the GRU model
+    'layers': 5,  # The layers of the GRU model
     'emb_dim': 300,  # The embedding dimension (either for the input) or for the integrated Embedding layer
     'numeric_data_size': 8,  # The number of numeric variables that are added as input to the linear layers
-    'dropout': 0.1,  # The dropout probability between LSTM layers
+    'dropout': 0.1,  # The dropout probability between GRU layers
     'linear_hidden_1': 25,
     'linear_hidden_2': 30,
     'classifier': False,  # Transforms the RNN into a classifier that outputs the probability that a Tweet has RTs > 0
