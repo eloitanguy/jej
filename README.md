@@ -67,7 +67,7 @@ The scores for this reproduction are expected to be:
 * XGB validation MAE: 139.56 (against 139.4)
 * Kaggle score: 149.60 (against 149.42)
 
-Remark: our best Kaggle score uses the average output between this model and another (worse) XGB model with the same parameters that uses the output of an older RNN (with the exact same parameters but with a numeric data input size of 5 instead).
+Remark: our best Kaggle score uses the average output between this model and another (worse) XGB model with the same parameters that uses the output of an older RNN (with the exact same parameters but with a numeric data input size of 5 instead). This strategy improves the Kaggle score by 0.3, and is kept as a final answer for risk management.
 
 ## Training PyTorch models
 
