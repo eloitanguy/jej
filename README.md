@@ -52,16 +52,16 @@ After the [Getting started](#getting-started) section, the commands to execute a
 
 * Training the Auto-Encoder model, this will save the Auto-Encoder RNN model in `checkpoints/AE_reproduction/best.pth`.
 
-    python train.py --deterministic
+    `python train.py --deterministic`
     
 * Preparing the input data for training and testing the XGBoost model (three files for train, val and test saved in `data/`), then training the model (saving it in `checkpoints/XGB_reproduction/checkpoint.model`):
 
-    python xgboost_estimator.py --prepare
-    python xgboost_estimator.py --train
+    `python xgboost_estimator.py --prepare`
+    `python xgboost_estimator.py --train`
 
 * Exporting the XGB model's estimation for the Kaggle test set in `checkpoints/XGB_reproduction/predictions.txt`:
 
-    python export_evaluation.py --xgb-name XGB_reproduction
+    `python export_evaluation.py --xgb-name XGB_reproduction`
 
 The complete reproduction takes 18 minutes on this machine, but may take significantly longer with less VRAM or less RAM (see the section below for comparing your setup to ours). In total the folder will take 870MB with the checkpoints saved.
 
