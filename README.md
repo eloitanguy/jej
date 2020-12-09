@@ -59,6 +59,16 @@ This will save the Auto-Encoder RNN model in `checkpoints/AE_reproduction/best.p
 
 Finally, it will export the predictions in `checkpoints/XGB_reproduction/predictions.txt`
 
+The complete reproduction takes 18 minutes on this machine, but may take significantly longer with less VRAM or less RAM (see the section below for comparing your setup to ours). In total the folder will take 870MB with the checkpoints saved.
+
+The scores for this reproduction are expected to be:
+
+* AE best validation MAE: 144.87 (against 144.14 for our original non-deterministic training).
+* XGB validation MAE: 139.56 (against 139.4)
+* Kaggle score: 149.60 (against 149.42)
+
+Remark: our best Kaggle score uses the average output between this model and another (worse) XGB model with the same parameters that uses the output of an older RNN (with the exact same parameters but with a numeric data input size of 5 instead).
+
 ## Training PyTorch models
 
 Before starting training, configure your network by modifying RNN_CONFIG in `config.py` and adjust your training parameters by changing TRAIN_CONFIG.
@@ -81,14 +91,6 @@ Our setup (for comparison):
 * i7-8750H (6 cores, @4.1GHz)
 * RTX 2080-MQ (8GB VRAM, used all of it here)
 * 16GB RAM (used under 8GB here)
-
-The complete reproduction takes 18 minutes on this machine, but may take significantly longer with less VRAM or less RAM.
-
-The scores for this reproduction are expected to be:
-
-* AE best validation MAE: 144.87 (against 144.14 for our original non-deterministic training).
-* XGB validation MAE: 139.56 (against 139.4)
-* Kaggle score: 149.60 (against 149.42)
 
 ## Training XGBoost models
 
