@@ -14,7 +14,7 @@ Machine Learning project for retweet estimation: Ecole polytechnique INF554 Data
 
 Given a tweet text and numeric data associated to the user, our objective is to estimate the number of retweets the tweet gets. 
 
-The data is available at https://www.kaggle.com/c/covid19-retweet-prediction-challenge-2020/data?select=data ; downloading it into data/ is required for running this repository's code.
+The data is available [on Kaggle](https://www.kaggle.com/c/covid19-retweet-prediction-challenge-2020/data?select=data), downloading it into data/ is required for running this repository's code.
 
 The repository is the outcome of many approaches to this problem, the final proposition being composed of two models:
 
@@ -41,7 +41,7 @@ Two other folders will be automatically created: checkpoints will store all the 
 
 Before executing the scripts, please go through the following steps:
 
-* Place the `evaluation.csv` and `train.csv` files from Kaggle (https://www.kaggle.com/c/covid19-retweet-prediction-challenge-2020/data?select=data) in data/
+* Place the `evaluation.csv` and `train.csv` files [from Kaggle](https://www.kaggle.com/c/covid19-retweet-prediction-challenge-2020/data?select=data) in data/
 * If necessary, install the required modules using `pip install -r requirements.txt`
 
 ## Reproducing results
